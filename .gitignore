@@ -1,0 +1,56 @@
+# Swift
+.build/
+DerivedData/
+
+# Xcode
+*.xcodeproj
+*.xcworkspace
+!**/xcshareddata/xccheckout
+!**/xcshareddata/SCM-current
+*.moved-aside
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.xcuserstate
+ios/xcuserdata/
+macos/xcuserdata/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+Desktop.ini
+
+awesome-nuxt/
+awesome-nuxt2/
+awesome-nuxt3/

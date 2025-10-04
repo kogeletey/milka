@@ -1,0 +1,21 @@
+[[repo]]
+dir = 'awesome-nuxt'
+remote = 'https://github.com/nuxt/awesome'
+branch = 'master'
+
+[[repo]]
+dir = 'awesome-nuxt2'
+remote = 'https://github.com/nuxt/awesome'
+branch = 'master'
+
+[[repo]]
+dir = 'awesome-nuxt3'
+remote = 'https://github.com/nuxt/awesome'
+branch = 'master'
+
+
+
+
+# or optional
+# commit = ''
+# branch = 'master'
