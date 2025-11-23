@@ -1,5 +1,8 @@
 require "toml"
-require "../milka"
+require "../milka/types/repository_info"
+require "../milka/types/mise_config"
+require "../milka/types/git_error"
+require "./utils"
 
 class ConfigManager
   def self.load_mise_config(path : String) : MiseConfig

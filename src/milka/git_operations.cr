@@ -1,5 +1,6 @@
 require "uuid"
-require "../milka"
+require "../milka/types/repository_info"
+require "../milka/types/git_error"
 require "./utils"
 
 # Spinner functionality
