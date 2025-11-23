@@ -25,20 +25,17 @@ COPY . .
 # Install shards
 RUN shards install --without-development
 
+# Create bin directory
+RUN mkdir -p bin
+
 # Build static binary
-RUN crystal build src/main.cr -o bin/milka --static --release --no-debug
+RUN shards build --static --release --no-debug
 
 # Create a final minimal image with just the binary
-FROM alpine:latest
-
-# Install any runtime dependencies if needed
-RUN apk add --no-cache ca-certificates
+FROM scratch
 
 # Copy the static binary from the build stage
-COPY --from=0 /app/bin/milka /usr/local/bin/milka
-
-# Set executable permissions
-RUN chmod +x /usr/local/bin/milka
+COPY --from=0 /app/bin/milka /milka
 
 # Command to run the application
-CMD ["milka", "--help"]
+CMD ["/milka"]
