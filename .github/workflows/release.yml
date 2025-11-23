@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  release:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            bin: milka
+            platform: linux
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            bin: milka
+            platform: macos
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bin: milka.exe
+            platform: windows
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Crystal
+        uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: '1.12.2'
+
+      - name: Install shards
+        run: shards install
+
+      - name: Build executable
+        run: |
+          mkdir -p bin
+          crystal build src/main.cr -o bin/milka --release --no-debug
+        shell: bash
+
+      - name: Rename binary for Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          mv bin/milka bin/milka.exe
+        shell: bash
+
+      - name: Package release asset
+        run: |
+          # Create a zip archive containing the executable
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            7z a -tzip "milka-${{ matrix.target }}.zip" "bin/milka.exe"
+          else
+            zip -r "milka-${{ matrix.target }}.zip" bin/milka
+          fi
+
+          # Generate checksum for the archive
+          if command -v sha256sum > /dev/null; then
+            sha256sum "milka-${{ matrix.target }}.zip" > "milka-${{ matrix.target }}.zip.sha256"
+          elif command -v shasum > /dev/null; then
+            shasum -a 256 "milka-${{ matrix.target }}.zip" > "milka-${{ matrix.target }}.zip.sha256"
+          elif command -v certutil > /dev/null; then
+            certutil -hashfile "milka-${{ matrix.target }}.zip" SHA256 > "milka-${{ matrix.target }}.zip.sha256"
+          fi
+        shell: bash
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./milka-${{ matrix.target }}.zip
+          asset_name: milka-${{ matrix.target }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload checksum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./milka-${{ matrix.target }}.zip.sha256
+          asset_name: milka-${{ matrix.target }}.zip.sha256
+          asset_content_type: text/plain

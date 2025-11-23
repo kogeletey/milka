@@ -1,0 +1,35 @@
+name: Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Crystal
+        uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: '1.12.2'
+
+      - name: Install shards
+        run: shards install
+
+      - name: Run tests
+        run: crystal spec
+
+      - name: Build executable
+        run: |
+          mkdir -p bin
+          crystal build src/main.cr -o bin/milka --release --no-debug
+
+      - name: Verify executable
+        run: |
+          ./bin/milka --help

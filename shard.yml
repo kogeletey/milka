@@ -1,11 +1,11 @@
-name: mise-milka
+name: milka
 version: 0.1.0
 
 authors:
-  - Your Name <your.email@example.com>
+  - Konrad Geletey <kg@re128.org>
 
 targets:
-  mise-milka:
+  milka:
     main: src/main.cr
 
 dependencies:
@@ -14,4 +14,4 @@ dependencies:
 
 crystal: '>= 1.0.0'
 
-license: MIT
+license: ISC
