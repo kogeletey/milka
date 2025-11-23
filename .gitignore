@@ -18,6 +18,7 @@
 
 # Dependencies
 lib/
+!src/**/lib
 .libs/
 
 # Project-specific
