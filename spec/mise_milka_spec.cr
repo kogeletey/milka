@@ -1,8 +1,9 @@
 require "spec"
+require "file_utils"
 require "../src/mise_milka"
 
 # Create temporary directory for test isolation
-SPEC_TEMP_DIR = File.join(Dir.temp, "mise_milka_spec_#{Time.local.to_unix}")
+SPEC_TEMP_DIR = File.join(Dir.tempdir, "mise_milka_spec_#{Time.local.to_unix}")
 
 describe "MiseMilka" do
   before_all do
@@ -10,7 +11,9 @@ describe "MiseMilka" do
   end
 
   after_all do
-    FileUtils.rm_rf(SPEC_TEMP_DIR) if Dir.exists?(SPEC_TEMP_DIR)
+    if Dir.exists?(SPEC_TEMP_DIR)
+      FileUtils.rm_rf(SPEC_TEMP_DIR)
+    end
   end
 
   describe "RepositoryInfo" do
@@ -119,18 +122,13 @@ describe "MiseMilka" do
   end
 
   describe "GitManager" do
-    before_all do
-      @test_dir = File.join(SPEC_TEMP_DIR, "git_test")
-      Dir.mkdir_p(@test_dir)
-    end
-
     it "processes all repositories" do
       repos = [
         RepositoryInfo.new("repo1", "https://github.com/example/repo1"),
         RepositoryInfo.new("repo2", "https://github.com/example/repo2"),
       ]
 
-      # Since we can't really clone these repos without network access, 
+      # Since we can't really clone these repos without network access,
       # we'll just make sure the method doesn't crash on an empty array
       git_manager = GitManager.new
       # This test would need real git repos to properly test, but we can at least verify the method exists

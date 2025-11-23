@@ -70,16 +70,71 @@ def load_mise_config(path : String) : MiseConfig
     # Handle the case where the data is an array of repo tables
     if toml_data.has_key?("repo")
       repo_data = toml_data["repo"]
-      repo_array = repo_data.is_a?(Array) ? repo_data.as_a : [repo_data]
 
-      repo_array.each do |repo_entry|
-        repo_obj = repo_entry.is_a?(Hash) ? repo_entry.as_h : repo_entry
-        name = repo_obj["dir"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'dir' field")
-        url = repo_obj["remote"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'remote' field")
-        branch = repo_obj["branch"]?.try(&.as_s) || "main"
-        commit = repo_obj["commit"]?.try(&.as_s) || ""
+      # Process repo_data based on its actual type
+      case repo_data
+      when Array
+        # If repo_data is already an array, process each element
+        repo_data.each do |item|
+          # Each item should be a TOML::Any that represents a repo object
+          repo_hash = if item.is_a?(Hash)
+                        item
+                      elsif item.is_a?(TOML::Any)
+                        # Check if it can be converted to a hash safely
+                        hash_result = item.as_h?
+                        if hash_result.nil?
+                          raise GitError.config_file_invalid("Repository entry is not a valid object: #{item}")
+                        end
+                        hash_result
+                      else
+                        raise GitError.config_file_invalid("Unexpected repository data type: #{item.class}")
+                      end
 
-        repositories << RepositoryInfo.new(name, url, branch, commit)
+          name = repo_hash["dir"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'dir' field")
+          url = repo_hash["remote"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'remote' field")
+          branch = repo_hash["branch"]?.try(&.as_s) || "main"
+          commit = repo_hash["commit"]?.try(&.as_s) || ""
+
+          repositories << RepositoryInfo.new(name, url, branch, commit)
+        end
+      when TOML::Any
+        # Check if the TOML::Any represents an array or a hash
+        if repo_data.as_a?
+          # It's an array of objects
+          repo_data.as_a.each do |item|
+            # Each item should be a TOML::Any that represents a repo object
+            repo_hash = if item.is_a?(Hash)
+                          item
+                        elsif item.is_a?(TOML::Any)
+                          # Check if it can be converted to a hash safely
+                          hash_result = item.as_h?
+                          if hash_result.nil?
+                            raise GitError.config_file_invalid("Repository entry is not a valid object: #{item}")
+                          end
+                          hash_result
+                        else
+                          raise GitError.config_file_invalid("Unexpected repository data type: #{item.class}")
+                        end
+
+            name = repo_hash["dir"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'dir' field")
+            url = repo_hash["remote"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'remote' field")
+            branch = repo_hash["branch"]?.try(&.as_s) || "main"
+            commit = repo_hash["commit"]?.try(&.as_s) || ""
+
+            repositories << RepositoryInfo.new(name, url, branch, commit)
+          end
+        else
+          # It's a single object
+          repo_hash = repo_data.as_h
+          name = repo_hash["dir"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'dir' field")
+          url = repo_hash["remote"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'remote' field")
+          branch = repo_hash["branch"]?.try(&.as_s) || "main"
+          commit = repo_hash["commit"]?.try(&.as_s) || ""
+
+          repositories << RepositoryInfo.new(name, url, branch, commit)
+        end
+      else
+        raise GitError.config_file_invalid("Unexpected 'repo' data type: #{repo_data.class}")
       end
     end
   rescue e : TOML::ParseException
@@ -373,11 +428,11 @@ end
 
 # CLI Helper Functions and Constants
 ANSI_COLORS = {
-  reset:    "\033[0m",
-  info:     "\033[34m",  # blue
-  success:  "\033[32m",  # green
-  error:    "\033[31m",  # red
-  warning:  "\033[33m"   # yellow
+  reset:   "\033[0m",
+  info:    "\033[34m", # blue
+  success: "\033[32m", # green
+  error:   "\033[31m", # red
+  warning: "\033[33m", # yellow
 }
 
 def print_info(message : String)
@@ -424,6 +479,8 @@ class SpinnerState
     color = success ? ANSI_COLORS[:success] : ANSI_COLORS[:error]
     symbol = success ? "✅" : "❌"
     print "\r#{color}#{symbol} #{@current_label}#{ANSI_COLORS[:reset]}"
+    @current_id = ""
+    @current_label = ""
   end
 
   def is_active_and_id_matches?(id : String) : Bool
@@ -480,8 +537,16 @@ end
 # Command enum as symbols
 def get_command_from_string(command_str : String)
   case command_str
-  when "clone", "fetch", "pull", "push", "help"
-    command_str
+  when "clone"
+    :clone
+  when "fetch"
+    :fetch
+  when "pull"
+    :pull
+  when "push"
+    :push
+  when "help"
+    :help
   else
     nil
   end
@@ -519,7 +584,7 @@ def main
     exit(1)
   end
 
-  command_string = non_option_args[0]  # Should be safe since we checked non_option_args is not empty
+  command_string = non_option_args[0] # Should be safe since we checked non_option_args is not empty
   command = get_command_from_string(command_string)
 
   unless command
@@ -528,7 +593,7 @@ def main
     exit(1)
   end
 
-  if command == "help"
+  if command == :help
     print_usage
     exit(0)
   end
@@ -568,17 +633,17 @@ def main
         exit(1)
       end
       case command
-      when "clone"
+      when :clone
         git_manager.clone_repository(repo)
-      when "fetch"
+      when :fetch
         git_manager.fetch_repository(repo)
-      when "pull"
+      when :pull
         git_manager.pull_repository(repo)
-      when "push"
+      when :push
         git_manager.push_repository(repo)
       end
     else
-      git_manager.process_all_repositories(repositories, command)
+      git_manager.process_all_repositories(repositories, command.to_s)
     end
   rescue e : GitError
     print_error("❌ Error: #{e.message}")
@@ -586,4 +651,3 @@ def main
   end
 end
 
-main if __FILE__ == $0
