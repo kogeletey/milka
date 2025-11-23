@@ -1,23 +1,4 @@
-FROM alpine:latest
-
-# Install Crystal dependencies and build tools
-RUN apk add --no-cache \
-    crystal \
-    shards \
-    yaml-dev \
-    git \
-    pcre2-dev \
-    gc-dev \
-    yaml-static \
-    openssl-dev \
-    openssl-libs-static \
-    libxml2-dev \
-    libxml2-static \
-    zlib-dev \
-    zlib-static \
-    xz-dev \
-    xz-static \
-    make
+FROM crystallang/crystal:1-alpine
 
 # Set working directory
 WORKDIR /app
