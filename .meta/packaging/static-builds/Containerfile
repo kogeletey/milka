@@ -4,18 +4,19 @@ FROM alpine:latest
 RUN apk add --no-cache \
     crystal \
     shards \
-    gcc \
-    musl-dev \
-    libxml2-dev \
     yaml-dev \
-    libevent-dev \
-    openssl-dev \
-    pcre-dev \
+    git \
     pcre2-dev \
     gc-dev \
-    gmp-dev \
-    libffi-dev \
-    git \
+    yaml-static \
+    openssl-dev \
+    openssl-libs-static \
+    libxml2-dev \
+    libxml2-static \
+    zlib-dev \
+    zlib-static \
+    xz-dev \
+    xz-static \
     make
 
 # Set working directory
