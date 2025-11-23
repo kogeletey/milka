@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - 'v*'
-    branches: [ release ]
   release:
     types: [created]
 
@@ -62,7 +61,8 @@ jobs:
           if [ "${{ matrix.platform }}" = "windows" ]; then
             7z a -tzip "milka-${{ matrix.target }}.zip" "bin/milka.exe"
           else
-            zip -r "milka-${{ matrix.target }}.zip" bin/milka
+            mv bin/milka milka
+            zip -r "milka-${{ matrix.target }}.zip" milka
           fi
 
           # Generate checksum for the archive
