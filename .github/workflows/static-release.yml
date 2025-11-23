@@ -1,31 +1,28 @@
 name: Static Release Build and Publish
 
 on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [created]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 env:
   CRYSTAL_VERSION: '1.12.2'
 
 jobs:
   release:
-    name: Build and release for ${{ matrix.target }}
+    name: Build static binary using container
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
+          - platform: linux-x86_64-static
             bin: milka
-            platform: linux-x86_64-static
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            bin: milka
-            platform: macos-x86_64
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            bin: milka.exe
-            platform: windows-x86_64
-
-    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout code
@@ -33,12 +30,10 @@ jobs:
 
       # For Linux static build using container
       - name: Set up Docker Buildx
-        if: startsWith(matrix.os, 'ubuntu')
         uses: docker/setup-buildx-action@v3
 
       # Build static binary using container for Linux
-      - name: Build static binary using Alpine container (Linux)
-        if: startsWith(matrix.os, 'ubuntu')
+      - name: Build static binary using Alpine container
         run: |
           # Build the container and extract the static binary
           docker build -f ./.meta/packaging/static-builds/Containerfile -t milka-static-build .
@@ -47,71 +42,26 @@ jobs:
           docker cp temp-container:/usr/local/bin/milka ./milka
           docker rm -v temp-container > /dev/null
           docker rmi milka-static-build > /dev/null
-          mkdir -p bin
-          mv ./milka ./bin/milka
-          chmod +x ./bin/milka
-
-      # Fallback for other platforms (macOS, Windows)
-      - name: Setup Crystal (macOS/Windows)
-        if: ${{ !startsWith(matrix.os, 'ubuntu') }}
-        uses: crystal-lang/install-crystal@v1
-        with:
-          crystal: ${{ env.CRYSTAL_VERSION }}
-
-      # Install shards for non-Linux platforms
-      - name: Install shards (macOS/Windows)
-        if: ${{ !startsWith(matrix.os, 'ubuntu') }}
-        run: shards install --without-development
-
-      # Build executable for non-Linux platforms
-      - name: Build executable (macOS/Windows)
-        if: ${{ !startsWith(matrix.os, 'ubuntu') }}
-        run: |
-          mkdir -p bin
-          if [ "${{ matrix.os }}" = "macos-latest" ]; then
-            # Build on macOS (not truly static but release build)
-            crystal build src/main.cr -o bin/${{ matrix.bin }} --release --target ${{ matrix.target }}
-          else
-            # Windows build
-            crystal build src/main.cr -o bin/${{ matrix.bin }} --release --target ${{ matrix.target }}
-          fi
+          chmod +x ./milka
 
       # Package the binary
       - name: Package release asset
         run: |
-          # Create a zip archive containing the executable
-          if [ "${{ matrix.platform }}" = "windows-x86_64" ]; then
-            7z a -tzip "milka-${{ matrix.platform }}.zip" "bin/milka.exe"
-          else
-            zip -r "milka-${{ matrix.platform }}.zip" "bin/${{ matrix.bin }}"
-          fi
+          zip -r "milka-${{ matrix.platform }}.zip" "${{ matrix.bin }}"
 
           # Generate checksum for the archive
           if command -v sha256sum > /dev/null; then
             sha256sum "milka-${{ matrix.platform }}.zip" > "milka-${{ matrix.platform }}.zip.sha256"
           elif command -v shasum > /dev/null; then
             shasum -a 256 "milka-${{ matrix.platform }}.zip" > "milka-${{ matrix.platform }}.zip.sha256"
-          elif command -v certutil > /dev/null; then
-            certutil -hashfile "milka-${{ matrix.platform }}.zip" SHA256 > "milka-${{ matrix.platform }}.zip.sha256"
           fi
 
       # Upload the release assets
-      - name: Upload release asset
-        uses: actions/upload-release-asset@v1
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            milka-${{ matrix.platform }}.zip
+            milka-${{ matrix.platform }}.zip.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./milka-${{ matrix.platform }}.zip
-          asset_name: milka-${{ matrix.platform }}.zip
-          asset_content_type: application/zip
-
-      - name: Upload checksum
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./milka-${{ matrix.platform }}.zip.sha256
-          asset_name: milka-${{ matrix.platform }}.zip.sha256
-          asset_content_type: text/plain
