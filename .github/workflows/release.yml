@@ -4,8 +4,10 @@ on:
   push:
     tags:
       - 'v*'
+    branches: [ release ]
   release:
     types: [created]
+
 
 jobs:
   release:
@@ -70,22 +72,11 @@ jobs:
           fi
         shell: bash
 
-      - name: Upload release asset
-        uses: actions/upload-release-asset@v1
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            milka-${{ matrix.target }}.zip
+            milka-${{ matrix.target }}.zip.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./milka-${{ matrix.target }}.zip
-          asset_name: milka-${{ matrix.target }}.zip
-          asset_content_type: application/zip
-
-      - name: Upload checksum
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./milka-${{ matrix.target }}.zip.sha256
-          asset_name: milka-${{ matrix.target }}.zip.sha256
-          asset_content_type: text/plain

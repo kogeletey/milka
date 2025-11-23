@@ -1,11 +1,6 @@
 name: Static Release Build and Publish
 
-on:
-  push:
-    tags:
-      - 'v*'
-  release:
-    types: [published]
+on: false
 
 env:
   CRYSTAL_VERSION: '1.12.2'
