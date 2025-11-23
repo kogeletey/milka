@@ -510,6 +510,7 @@ def print_usage
     fetch [repo-name]    Fetch updates for a repository or all repositories (if no repo-name provided)
     pull [repo-name]     Pull latest changes for a repository or all repositories (if no repo-name provided)
     push [repo-name]     Push changes for a repository or all repositories (if no repo-name provided)
+    scan                 Scan for git repositories in the current directory and add them to reps.toml
     help                 Show this help message
 
   Options:
@@ -525,6 +526,7 @@ def print_usage
     mise-milka pull my-repo             Pull latest changes for specific repository
     mise-milka push                    Push changes for all repositories
     mise-milka push my-repo             Push changes for specific repository
+    mise-milka scan                     Scan current directory for git repos and add to reps.toml
     mise-milka --config /path/to/reps.toml clone
     mise-milka --config /path/to/reps.toml --branch feature-branch clone my-repo
   USAGE
@@ -532,6 +534,205 @@ end
 
 def find_repository_in(repositories : Array(RepositoryInfo), named name : String)
   repositories.find { |repo| repo.name == name }
+end
+
+# Function to get git remote information from a git directory
+def get_git_remote_info(git_dir : String) : String?
+  begin
+    # Execute git remote -v to get the remote URLs
+    # Use StringBuilders to capture output like in the existing code
+    stdout_builder = String::Builder.new
+    stderr_builder = String::Builder.new
+
+    result = Process.run(
+      "git",
+      ["remote", "-v"],
+      output: stdout_builder,
+      error: stderr_builder,
+      chdir: git_dir
+    )
+
+    if result.success?
+      output = stdout_builder.to_s
+      # Parse the output to find the origin remote
+      output.each_line do |line|
+        if line.includes?("origin") && line.includes?("(fetch)")
+          # Extract the URL from the line like: origin	https://github.com/user/repo.git (fetch)
+          parts = line.split(/\s+/)
+          if parts.size >= 2
+            return parts[1]
+          end
+        end
+      end
+    end
+  rescue
+    # If there's an error running git command, return nil
+  end
+
+  nil
+end
+
+# Function to get the current branch of a git repository
+def get_git_branch(git_dir : String) : String
+  begin
+    # Use StringBuilders to capture output like in the existing code
+    stdout_builder = String::Builder.new
+    stderr_builder = String::Builder.new
+
+    result = Process.run(
+      "git",
+      ["rev-parse", "--abbrev-ref", "HEAD"],
+      output: stdout_builder,
+      error: stderr_builder,
+      chdir: git_dir
+    )
+
+    if result.success?
+      branch = stdout_builder.to_s.strip
+      return branch unless branch.empty?
+    end
+  rescue
+    # If there's an error, return default branch
+  end
+
+  "main"  # Default branch
+end
+
+# Function to check if a repository is already in the config
+def repo_exists_in_config(config_path : String, dir_name : String) : Bool
+  return false unless File.exists?(config_path)
+
+  begin
+    content = File.read(config_path)
+    toml_data = TOML.parse(content)
+
+    if toml_data.has_key?("repo")
+      repo_data = toml_data["repo"]
+
+      case repo_data
+      when Array
+        repo_data.each do |item|
+          repo_hash = if item.is_a?(Hash)
+                        item
+                      elsif item.is_a?(TOML::Any)
+                        hash_result = item.as_h?
+                        return false if hash_result.nil?
+                        hash_result
+                      else
+                        next
+                      end
+
+          existing_dir = repo_hash["dir"]?.try(&.as_s)
+          return true if existing_dir == dir_name
+        end
+      when TOML::Any
+        if repo_data.as_a?
+          repo_data.as_a.each do |item|
+            repo_hash = if item.is_a?(Hash)
+                          item
+                        elsif item.is_a?(TOML::Any)
+                          hash_result = item.as_h?
+                          next if hash_result.nil?
+                          hash_result
+                        else
+                          next
+                        end
+
+            existing_dir = repo_hash["dir"]?.try(&.as_s)
+            return true if existing_dir == dir_name
+          end
+        else
+          repo_hash = repo_data.as_h
+          existing_dir = repo_hash["dir"]?.try(&.as_s)
+          return true if existing_dir == dir_name
+        end
+      end
+    end
+  rescue
+    # If there's an error parsing the config, return false
+  end
+
+  false
+end
+
+# Function to add a git repository to the reps.toml file
+def add_git_repo_to_config(config_path : String, dir_name : String, remote_url : String, branch : String)
+  # Create the directory if it doesn't exist
+  config_dir = File.dirname(config_path)
+  Dir.mkdir_p(config_dir) unless File.directory?(config_dir)
+
+  # Check if the repository already exists in the config
+  return if repo_exists_in_config(config_path, dir_name)
+
+  # Format the entry in TOML format
+  new_entry = "\n[[repo]]\n"
+  new_entry += "dir = '#{dir_name}'\n"
+  new_entry += "remote = '#{remote_url}'\n"
+  new_entry += "branch = '#{branch}'\n\n"
+
+  # Append the new entry to the config file
+  File.open(config_path, "a") do |file|
+    file.puts(new_entry)
+  end
+end
+
+# Main function to scan directories and add git repositories to config
+def scan_and_add_git_repos(config_path : String, root_path : String = ".")
+  print_info("Scanning for git repositories in: #{root_path}")
+
+  git_dirs = scan_git_directories(root_path)
+
+  if git_dirs.empty?
+    print_warning("No git repositories found in: #{root_path}")
+    return
+  end
+
+  print_info("Found #{git_dirs.size} git repositories")
+
+  added_count = 0
+  git_dirs.each do |git_dir|
+    dir_name = File.basename(git_dir)
+
+    print_info("Checking git repository: #{dir_name}")
+
+    # Get the remote URL
+    remote_url = get_git_remote_info(git_dir)
+    if remote_url.nil?
+      print_warning("  No remote found for #{dir_name}, skipping...")
+      next
+    end
+
+    # Get the current branch
+    branch = get_git_branch(git_dir)
+
+    print_info("  Remote: #{remote_url}")
+    print_info("  Branch: #{branch}")
+
+    # Add to config if not already present
+    add_git_repo_to_config(config_path, dir_name, remote_url, branch)
+    print_success("  Added #{dir_name} to config")
+    added_count += 1
+  end
+
+  print_success("Scan completed! Added #{added_count} repositories to #{config_path}")
+end
+
+# Function to scan directories and identify git repositories
+def scan_git_directories(root_path : String = ".") : Array(String)
+  git_directories = [] of String
+
+  Dir.glob("#{root_path}/**/*").each do |path|
+    next unless File.directory?(path)
+
+    git_path = File.join(path, ".git")
+    if File.directory?(git_path)
+      # Get the directory name (last component of path)
+      dir_name = File.basename(path)
+      git_directories << path
+    end
+  end
+
+  git_directories
 end
 
 # Command enum as symbols
@@ -545,6 +746,8 @@ def get_command_from_string(command_str : String)
     :pull
   when "push"
     :push
+  when "scan"
+    :scan
   when "help"
     :help
   else
@@ -600,50 +803,62 @@ def main
 
   repo_name = non_option_args.size > 1 ? non_option_args[1] : nil
 
-  # Load configuration
-  begin
-    config = load_mise_config(config_path)
-    print_info("Loaded #{config.repositories.size} repositories")
-  rescue e : GitError
-    print_error("❌ Error: #{e.message}")
-    exit(1)
-  end
+  # Initialize repositories variable
+  repositories = [] of RepositoryInfo
 
-  # If no repos loaded, exit early
-  if config.repositories.empty?
-    print_error("No repositories available to process. Check the warning above and your config file.")
-    exit(1)
-  end
+  # Load configuration for commands that need it (not for scan)
+  if command != :scan
+    begin
+      config = load_mise_config(config_path)
+      print_info("Loaded #{config.repositories.size} repositories")
+      repositories = config.repositories
+    rescue e : GitError
+      print_error("❌ Error: #{e.message}")
+      exit(1)
+    end
 
-  # Override branch if specified
-  repositories = config.repositories
-  if branch_override
-    repositories = repositories.map do |repo|
-      RepositoryInfo.new(repo.name, repo.url, branch_override, repo.latest_commit)
+    # If no repos loaded, exit early (for commands that need config)
+    if repositories.empty?
+      print_error("No repositories available to process. Check the warning above and your config file.")
+      exit(1)
+    end
+
+    # Override branch if specified
+    if branch_override
+      repositories = repositories.map do |repo|
+        RepositoryInfo.new(repo.name, repo.url, branch_override, repo.latest_commit)
+      end
     end
   end
 
   git_manager = GitManager.new
 
   begin
-    if repo_name
-      repo = find_repository_in(repositories, named: repo_name)
-      unless repo
-        print_error("❌ Error: Repository '#{repo_name}' not found in configuration")
-        exit(1)
-      end
-      case command
-      when :clone
-        git_manager.clone_repository(repo)
-      when :fetch
-        git_manager.fetch_repository(repo)
-      when :pull
-        git_manager.pull_repository(repo)
-      when :push
-        git_manager.push_repository(repo)
-      end
+    case command
+    when :scan
+      # Handle the scan command separately - it doesn't require existing config
+      scan_and_add_git_repos(config_path)
     else
-      git_manager.process_all_repositories(repositories, command.to_s)
+      # For other commands, we need the configuration
+      if repo_name
+        repo = find_repository_in(repositories, named: repo_name)
+        unless repo
+          print_error("❌ Error: Repository '#{repo_name}' not found in configuration")
+          exit(1)
+        end
+        case command
+        when :clone
+          git_manager.clone_repository(repo)
+        when :fetch
+          git_manager.fetch_repository(repo)
+        when :pull
+          git_manager.pull_repository(repo)
+        when :push
+          git_manager.push_repository(repo)
+        end
+      else
+        git_manager.process_all_repositories(repositories, command.to_s)
+      end
     end
   rescue e : GitError
     print_error("❌ Error: #{e.message}")
