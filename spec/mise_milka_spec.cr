@@ -1,11 +1,11 @@
 require "spec"
 require "file_utils"
-require "../src/mise_milka"
+require "../src/milka"
 
 # Create temporary directory for test isolation
-SPEC_TEMP_DIR = File.join(Dir.tempdir, "mise_milka_spec_#{Time.local.to_unix}")
+SPEC_TEMP_DIR = File.join(Dir.tempdir, "milka_spec_#{Time.local.to_unix}")
 
-describe "MiseMilka" do
+describe "Milka" do
   before_all do
     Dir.mkdir_p(SPEC_TEMP_DIR)
   end

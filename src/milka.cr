@@ -501,9 +501,9 @@ end
 # Helper functions
 def print_usage
   puts <<-USAGE
-  Mise Milka - A command-line tool for managing multiple git repositories
+  Milka - A command-line tool for managing multiple git repositories
 
-  Usage: mise-milka <command> [repo-name] [options]
+  Usage: milka <command> [repo-name] [options]
 
   Commands:
     clone [repo-name]    Clone a repository or all repositories (if no repo-name provided)
@@ -518,17 +518,17 @@ def print_usage
     --branch <branch>    Specify branch (default: from config or main)
 
   Examples:
-    mise-milka clone                    Clone all repositories from reps.toml
-    mise-milka clone my-repo            Clone specific repository
-    mise-milka fetch                    Fetch updates for all repositories
-    mise-milka fetch my-repo            Fetch updates for specific repository
-    mise-milka pull                     Pull latest changes for all repositories
-    mise-milka pull my-repo             Pull latest changes for specific repository
-    mise-milka push                    Push changes for all repositories
-    mise-milka push my-repo             Push changes for specific repository
-    mise-milka scan                     Scan current directory for git repos and add to reps.toml
-    mise-milka --config /path/to/reps.toml clone
-    mise-milka --config /path/to/reps.toml --branch feature-branch clone my-repo
+    milka clone                    Clone all repositories from reps.toml
+    milka clone my-repo            Clone specific repository
+    milka fetch                    Fetch updates for all repositories
+    milka fetch my-repo            Fetch updates for specific repository
+    milka pull                     Pull latest changes for all repositories
+    milka pull my-repo             Pull latest changes for specific repository
+    milka push                    Push changes for all repositories
+    milka push my-repo             Push changes for specific repository
+    milka scan                     Scan current directory for git repos and add to reps.toml
+    milka --config /path/to/reps.toml clone
+    milka --config /path/to/reps.toml --branch feature-branch clone my-repo
   USAGE
 end
 
@@ -784,7 +784,7 @@ def main
 
   if non_option_args.empty?
     print_usage
-    exit(1)
+    exit(0)
   end
 
   command_string = non_option_args[0] # Should be safe since we checked non_option_args is not empty
