@@ -1,44 +1,32 @@
-# Swift
-.build/
-DerivedData/
+# Crystal
+.libs/
+*.o
+*.so
+*.so.*
+*.dylib
+*.bundle
+*.a
+*.obj
+*.exe
+.libs
 
-# Xcode
-*.xcodeproj
-*.xcworkspace
-!**/xcshareddata/xccheckout
-!**/xcshareddata/SCM-current
-*.moved-aside
-DerivedData/
-*.hmap
-*.ipa
-*.dSYM.zip
-*.xcuserstate
-ios/xcuserdata/
-macos/xcuserdata/
+# Crystal build artifacts
+.crystal
+.crystal/*
+!/crystal/**
+!/crystal/.gitkeep
 
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
+# Dependencies
+lib/
+.libs/
 
-# Thumbnails
-._*
-
-# Files that might appear in the root of a volume
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
-
-# Directories potentially created on remote AFP share
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk
+# Project-specific
+.crystal
+.crystal/*
+!/crystal/**
+!/crystal/.gitkeep
+*.dwarf
+*.dSYM
 
 # IDE
 .vscode/
@@ -50,6 +38,39 @@ Temporary Items
 # OS
 Thumbs.db
 Desktop.ini
+.DS_Store
+
+# macOS
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+.NetworkTrashFolder
+TemporaryItems
+.apdisk
+
+# Temporary test directories
+spec/.crystal/
+spec/_results/
+spec/_output/
+
+# Crystal shard build directory
+.scripts/
+.libs/
+
+# Node.js if used for any web components
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 awesome-nuxt/
 awesome-nuxt2/

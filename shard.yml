@@ -1,0 +1,17 @@
+name: mise-milka
+version: 0.1.0
+
+authors:
+  - Your Name <your.email@example.com>
+
+targets:
+  mise-milka:
+    main: src/mise_milka.cr
+
+dependencies:
+  toml:
+    github: crystal-community/toml.cr
+
+crystal: '>= 1.0.0'
+
+license: MIT
