@@ -39,7 +39,7 @@ jobs:
           docker build -f ./.meta/packaging/static-builds/Containerfile -t milka-static-build .
           # Create a temporary container to extract the binary
           docker create --name temp-container milka-static-build
-          docker cp temp-container:/usr/local/bin/milka ./milka
+          docker cp temp-container:/milka ./milka
           docker rm -v temp-container > /dev/null
           docker rmi milka-static-build > /dev/null
           chmod +x ./milka

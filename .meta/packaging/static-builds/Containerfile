@@ -1,25 +1,17 @@
 FROM crystallang/crystal:1-alpine
 
-# Set working directory
 WORKDIR /app
 
-# Copy the application source code
 COPY . .
 
-# Install shards
 RUN shards install --without-development
 
-# Create bin directory
 RUN mkdir -p bin
 
-# Build static binary
 RUN shards build --static --release --no-debug
 
-# Create a final minimal image with just the binary
 FROM scratch
 
-# Copy the static binary from the build stage
 COPY --from=0 /app/bin/milka /milka
 
-# Command to run the application
 CMD ["/milka"]
