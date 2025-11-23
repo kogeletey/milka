@@ -1,8 +1,8 @@
 require "spec"
 require "file_utils"
 require "../src/milka"
-require "../src/lib/commands"
-require "../src/lib/git_operations"
+require "../src/milka/commands"
+require "../src/milka/git_operations"
 
 # Create temporary directory for test isolation
 SPEC_TEMP_DIR = File.join(Dir.tempdir, "milka_spec_#{Time.local.to_unix}")

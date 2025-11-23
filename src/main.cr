@@ -1,6 +1,6 @@
 require "./milka"
-require "./lib/git_operations"
-require "./lib/commands"
+require "./milka/git_operations"
+require "./milka/commands"
 
 # Call main method to start the application
 main
