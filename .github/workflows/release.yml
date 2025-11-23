@@ -46,13 +46,11 @@ jobs:
       - name: Build executable
         run: |
           mkdir -p bin
-          crystal build src/main.cr -o bin/milka --release --no-debug
-        shell: bash
-
-      - name: Rename binary for Windows
-        if: matrix.os == 'windows-latest'
-        run: |
-          mv bin/milka bin/milka.exe
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            crystal build src/main.cr -o bin/milka.exe --release --no-debug
+          else
+            crystal build src/main.cr -o bin/milka --release --no-debug
+          fi
         shell: bash
 
       - name: Package release asset
@@ -61,8 +59,9 @@ jobs:
           if [ "${{ matrix.platform }}" = "windows" ]; then
             7z a -tzip "milka-${{ matrix.target }}.zip" "bin/milka.exe"
           else
-            mv bin/milka milka
+            cp bin/milka milka
             zip -r "milka-${{ matrix.target }}.zip" milka
+            rm milka  # Clean up the copied file
           fi
 
           # Generate checksum for the archive

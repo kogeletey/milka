@@ -1,0 +1,44 @@
+FROM alpine:latest
+
+# Install Crystal dependencies and build tools
+RUN apk add --no-cache \
+    crystal \
+    shards \
+    gcc \
+    musl-dev \
+    libxml2-dev \
+    libyaml-dev \
+    libevent-dev \
+    openssl-dev \
+    pcre-dev \
+    gmp-dev \
+    libffi-dev \
+    git \
+    make
+
+# Set working directory
+WORKDIR /app
+
+# Copy the application source code
+COPY . .
+
+# Install shards
+RUN shards install --without-development
+
+# Build static binary
+RUN crystal build src/main.cr -o bin/milka --static --release --no-debug
+
+# Create a final minimal image with just the binary
+FROM alpine:latest
+
+# Install any runtime dependencies if needed
+RUN apk add --no-cache ca-certificates
+
+# Copy the static binary from the build stage
+COPY --from=0 /app/bin/milka /usr/local/bin/milka
+
+# Set executable permissions
+RUN chmod +x /usr/local/bin/milka
+
+# Command to run the application
+CMD ["milka", "--help"]
