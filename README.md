@@ -60,19 +60,26 @@ Pre-built static binaries are available for download on the [Releases](https://g
 3. Make the binary executable (on Unix-like systems): `chmod +x milka`
 4. Optionally, move the binary to a directory in your PATH
 
-## Building Static Binaries
+## Building with Container static build
 
-To build a static binary yourself:
+You can also build Milka using the provided container configuration. See `.meta/packaging/static-builds/Containerfile` for the container build setup.
 
+### Docker
 ```bash
-# On Linux with musl
-shards build --release -- --static
+# Build the container
+docker build -f .meta/packaging/static-builds/Containerfile -t milka .
 
-# Or using Crystal directly
-crystal build src/main.cr -o bin/milka --static --release
+# Run commands in the container
+docker run --rm -v $(pwd):/workspace -w /workspace milka clone
+docker run --rm -v $(pwd):/workspace -w /workspace milka pull
+
+# Copy the static binary from the built container
+docker create --name milka-container milka
+docker cp milka-container:/usr/local/bin/milka ./milka
+docker rm -v milka-container
 ```
 
-Static binaries are completely self-contained and don't require Crystal or any libraries to be installed on the target system.
+Container builds provide a reproducible build environment and make it easy to run Milka in containerized environments.
 
 ## Quick Start
 
