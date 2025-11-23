@@ -8,6 +8,8 @@ on:
   release:
     types: [created]
 
+permissions:
+  contents: write
 
 jobs:
   release:
@@ -28,6 +30,7 @@ jobs:
             platform: windows
 
     runs-on: ${{ matrix.os }}
+
 
     steps:
       - name: Checkout code
@@ -74,8 +77,6 @@ jobs:
 
       - name: Release
         uses: softprops/action-gh-release@v2
-        permissions:
-          contents: write
         with:
           files: |
             milka-${{ matrix.target }}.zip
