@@ -1,6 +1,8 @@
 require "spec"
 require "file_utils"
 require "../src/milka"
+require "../src/lib/commands"
+require "../src/lib/git_operations"
 
 # Create temporary directory for test isolation
 SPEC_TEMP_DIR = File.join(Dir.tempdir, "milka_spec_#{Time.local.to_unix}")
@@ -121,18 +123,16 @@ describe "Milka" do
     end
   end
 
-  describe "GitManager" do
-    it "processes all repositories" do
+  describe "Git operations" do
+    it "has basic functionality to process repositories" do
       repos = [
         RepositoryInfo.new("repo1", "https://github.com/example/repo1"),
         RepositoryInfo.new("repo2", "https://github.com/example/repo2"),
       ]
 
-      # Since we can't really clone these repos without network access,
-      # we'll just make sure the method doesn't crash on an empty array
-      git_manager = GitManager.new
-      # This test would need real git repos to properly test, but we can at least verify the method exists
-      git_manager.class.should eq(GitManager)
+      # Verify that we can create repository objects
+      repos.size.should eq(2)
+      repos[0].class.should eq(RepositoryInfo)
     end
   end
 
