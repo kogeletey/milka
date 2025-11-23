@@ -1,0 +1,17 @@
+#+title: TODO
+
+** TODO Support subtree :1:
+
+Allows one commit to push to all repositories
+
+- [[https://www.atlassian.com/git/tutorials/git-subtree][Git subtree]]
+
+#+begin_src toml
+[[reps]]
+# ...
+source = "git+subtree"
+#+end_src
+
+[thanks:blacksmoke16]https://forum.crystal-lang.org/t/milka-a-polyrepo-managment-tool/8556/4
+
+** TODO Support s3 :2:
