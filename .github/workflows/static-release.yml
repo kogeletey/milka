@@ -1,0 +1,109 @@
+name: Static Release Build and Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+
+env:
+  CRYSTAL_VERSION: '1.12.2'
+
+jobs:
+  release:
+    name: Build and release for ${{ matrix.target }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            bin: milka
+            platform: linux-x86_64-static
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            bin: milka
+            platform: macos-x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bin: milka.exe
+            platform: windows-x86_64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Crystal
+        uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: ${{ env.CRYSTAL_VERSION }}
+
+      # Linux static build setup
+      - name: Setup static build environment (Linux)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools musl-dev
+          # Set environment for static linking
+          echo "CC=musl-gcc" >> $GITHUB_ENV
+
+      # Install shards
+      - name: Install shards
+        run: shards install --without-development
+
+      # Build executable
+      - name: Build executable
+        run: |
+          mkdir -p bin
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            # Try static build on Linux
+            crystal build src/main.cr -o bin/${{ matrix.bin }} --static --release --target ${{ matrix.target }}
+          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+            # Static build on macOS (may not be fully static but release build)
+            crystal build src/main.cr -o bin/${{ matrix.bin }} --release --target ${{ matrix.target }}
+          else
+            # Windows build
+            crystal build src/main.cr -o bin/${{ matrix.bin }} --release --target ${{ matrix.target }}
+          fi
+
+      # Package the binary
+      - name: Package release asset
+        run: |
+          # Create a zip archive containing the executable
+          if [ "${{ matrix.platform }}" = "windows-x86_64" ]; then
+            7z a -tzip "milka-${{ matrix.platform }}.zip" "bin/${{ matrix.bin }}"
+          else
+            zip -r "milka-${{ matrix.platform }}.zip" "bin/${{ matrix.bin }}"
+          fi
+
+          # Generate checksum for the archive
+          if command -v sha256sum > /dev/null; then
+            sha256sum "milka-${{ matrix.platform }}.zip" > "milka-${{ matrix.platform }}.zip.sha256"
+          elif command -v shasum > /dev/null; then
+            shasum -a 256 "milka-${{ matrix.platform }}.zip" > "milka-${{ matrix.platform }}.zip.sha256"
+          elif command -v certutil > /dev/null; then
+            certutil -hashfile "milka-${{ matrix.platform }}.zip" SHA256 > "milka-${{ matrix.platform }}.zip.sha256"
+          fi
+
+      # Upload the release assets
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./milka-${{ matrix.platform }}.zip
+          asset_name: milka-${{ matrix.platform }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload checksum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./milka-${{ matrix.platform }}.zip.sha256
+          asset_name: milka-${{ matrix.platform }}.zip.sha256
+          asset_content_type: text/plain

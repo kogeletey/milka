@@ -2,6 +2,22 @@
 
 A command-line tool for managing multiple git repositories simultaneously. Milka allows you to clone, fetch, pull, and push changes across multiple repositories with a single command, making it easy to manage projects with multiple related repositories.
 
+## TL;DR
+
+Quick start with Milka:
+
+1. **Install**: Download from [Releases](https://github.com/kogeletey/milka/releases) or build from source
+2. **Configure**: Create `.meta/reps.toml` with your repositories
+3. **Use**: Run commands like `milka clone`, `milka pull`, `milka push` to manage all repos at once
+
+Example config:
+```toml
+[[repo]]
+dir = 'my-project'
+remote = 'https://github.com/username/my-project.git'
+branch = 'main'
+```
+
 ## Table of Contents
 - [Features](#features)
 - [Installation](#installation)
@@ -25,6 +41,8 @@ A command-line tool for managing multiple git repositories simultaneously. Milka
 
 ## Installation
 
+### From Source
+
 1. Ensure you have [Crystal](https://crystal-lang.org/) installed (version >= 1.0.0)
 2. Clone this repository
 3. Build the project:
@@ -32,6 +50,29 @@ A command-line tool for managing multiple git repositories simultaneously. Milka
    shards build
    ```
 4. The executable will be available as `bin/milka`
+
+### Pre-built Binaries
+
+Pre-built static binaries are available for download on the [Releases](https://github.com/kogeletey/milka/releases) page. These are statically linked and can run on most systems without additional dependencies.
+
+1. Download the appropriate binary for your platform
+2. Extract the archive
+3. Make the binary executable (on Unix-like systems): `chmod +x milka`
+4. Optionally, move the binary to a directory in your PATH
+
+## Building Static Binaries
+
+To build a static binary yourself:
+
+```bash
+# On Linux with musl
+shards build --release -- --static
+
+# Or using Crystal directly
+crystal build src/main.cr -o bin/milka --static --release
+```
+
+Static binaries are completely self-contained and don't require Crystal or any libraries to be installed on the target system.
 
 ## Quick Start
 
@@ -111,6 +152,13 @@ Push local changes to remote repositories.
 ```bash
 milka push                     # Push all repositories
 milka push repo-name           # Push specific repository
+```
+
+### `init`
+Initialize a new configuration file for managing repositories.
+
+```bash
+milka init                     # Create a new .meta/reps.toml configuration file with template
 ```
 
 ### `scan`

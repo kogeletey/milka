@@ -511,6 +511,7 @@ def print_usage
     pull [repo-name]     Pull latest changes for a repository or all repositories (if no repo-name provided)
     push [repo-name]     Push changes for a repository or all repositories (if no repo-name provided)
     scan                 Scan for git repositories in the current directory and add them to reps.toml
+    init                 Initialize a new reps.toml configuration file
     help                 Show this help message
 
   Options:
@@ -527,6 +528,7 @@ def print_usage
     milka push                    Push changes for all repositories
     milka push my-repo             Push changes for specific repository
     milka scan                     Scan current directory for git repos and add to reps.toml
+    milka init                     Initialize a new reps.toml configuration file
     milka --config /path/to/reps.toml clone
     milka --config /path/to/reps.toml --branch feature-branch clone my-repo
   USAGE
@@ -717,6 +719,44 @@ def scan_and_add_git_repos(config_path : String, root_path : String = ".")
   print_success("Scan completed! Added #{added_count} repositories to #{config_path}")
 end
 
+# Function to initialize the reps.toml configuration file
+def init_config(config_path : String)
+  # Check if the config file already exists
+  if File.exists?(config_path)
+    print_error("❌ Error: Configuration file already exists at: #{config_path}")
+    print_info("💡 To create a new configuration, remove the existing file first or use a different path.")
+    print_info("   Use: milka --config <new_path> init")
+    raise GitError.config_file_invalid("Configuration file already exists: #{config_path}")
+  end
+
+  # Extract directory path from config_path
+  config_dir = File.dirname(config_path)
+
+  # Create the directory if it doesn't exist
+  Dir.mkdir_p(config_dir) unless File.directory?(config_dir)
+
+  # Define the template content for reps.toml
+  template_content = <<-'TOML'
+  # Milka - Repository Configuration
+
+  # Add your repositories to this file using the format below
+  # [[repo]]
+  # dir = 'project'
+  # remote = 'https://github.com/username/my-project.git'
+  # branch = 'develop'
+  TOML
+
+  # Write the template to the config file
+  File.write(config_path, template_content.strip)
+
+  print_success("✅ Configuration file created at: #{config_path}")
+  print_info("💡 Edit #{config_path} to add your repositories:")
+  print_info("   - Replace 'my-project' with your local directory name")
+  print_info("   - Replace 'https://github.com/username/my-project.git' with your repository URL")
+  print_info("   - Set the appropriate branch (default: 'main')")
+  print_info("   - Add more repositories by duplicating the [[repo]] block")
+end
+
 # Function to scan directories and identify git repositories
 def scan_git_directories(root_path : String = ".") : Array(String)
   git_directories = [] of String
@@ -748,6 +788,8 @@ def get_command_from_string(command_str : String)
     :push
   when "scan"
     :scan
+  when "init"
+    :init
   when "help"
     :help
   else
@@ -806,8 +848,8 @@ def main
   # Initialize repositories variable
   repositories = [] of RepositoryInfo
 
-  # Load configuration for commands that need it (not for scan)
-  if command != :scan
+  # Load configuration for commands that need it (not for scan or init)
+  if command != :scan && command != :init
     begin
       config = load_mise_config(config_path)
       print_info("Loaded #{config.repositories.size} repositories")
@@ -838,6 +880,9 @@ def main
     when :scan
       # Handle the scan command separately - it doesn't require existing config
       scan_and_add_git_repos(config_path)
+    when :init
+      # Handle the init command - creates initial configuration
+      init_config(config_path)
     else
       # For other commands, we need the configuration
       if repo_name

@@ -277,10 +277,10 @@ describe "Milka" do
       spinner = SpinnerState.new
       id1 = spinner.start("test1")
       id2 = "different_id"
-      
+
       initial_active = spinner.is_active
       spinner.stop(id2, success: true)
-      
+
       # Should still be active since wrong id was provided
       spinner.is_active.should eq(initial_active)
     end
@@ -288,12 +288,80 @@ describe "Milka" do
     it "checks id matching correctly" do
       spinner = SpinnerState.new
       id = spinner.start("test")
-      
+
       spinner.is_active_and_id_matches?(id).should be_true
       spinner.is_active_and_id_matches?("wrong").should be_false
-      
+
       spinner.stop(id, success: true)
       spinner.is_active_and_id_matches?(id).should be_false
+    end
+  end
+
+  describe "init_config" do
+    it "creates config directory and file when it doesn't exist" do
+      config_path = File.join(SPEC_TEMP_DIR, "init_test", "reps.toml")
+
+      init_config(config_path)
+
+      File.exists?(config_path).should be_true
+
+      content = File.read(config_path)
+      content.should contain("# [[repo]]")
+      content.should contain("# dir = 'project'")
+      content.should contain("# remote = 'https://github.com/username/my-project.git'")
+      content.should contain("# branch = 'develop'")
+    end
+
+    it "creates directory if it doesn't exist" do
+      config_path = File.join(SPEC_TEMP_DIR, "nonexistent_dir", "nested", "reps.toml")
+
+      init_config(config_path)
+
+      File.exists?(config_path).should be_true
+      Dir.exists?(File.dirname(config_path)).should be_true
+    end
+
+    it "should raise GitError when config file already exists" do
+      config_path = File.join(SPEC_TEMP_DIR, "existing_config.toml")
+      # Create an existing config file
+      File.write(config_path, "[[repo]]\ndir = 'existing-repo'\nremote = 'http://example.com/repo.git'\n")
+
+      expect_raises(GitError) do
+        init_config(config_path)
+      end
+    end
+
+    it "should create config file even if directory exists but config doesn't" do
+      # Create a directory that exists but no config file inside
+      test_dir = File.join(SPEC_TEMP_DIR, "test_dir")
+      Dir.mkdir_p(test_dir) unless Dir.exists?(test_dir)
+      # Add a dummy file to the directory to ensure it exists
+      dummy_path = File.join(test_dir, "dummy.txt")
+      File.write(dummy_path, "dummy content")
+
+      config_path = File.join(test_dir, "reps.toml")
+
+      # Verify that the config file doesn't exist yet
+      File.exists?(config_path).should be_false
+
+      # Now run init_config which should create the config file
+      init_config(config_path)
+
+      # Verify config file was created
+      File.exists?(config_path).should be_true
+
+      # Verify the content is correct
+      content = File.read(config_path)
+      content.should contain("# [[repo]]")
+      content.should contain("# dir = 'project'")
+    end
+  end
+
+  describe "get_command_from_string" do
+    it "recognizes init command" do
+      get_command_from_string("init").should eq(:init)
+      get_command_from_string("clone").should eq(:clone)
+      get_command_from_string("invalid").should be_nil
     end
   end
 end
