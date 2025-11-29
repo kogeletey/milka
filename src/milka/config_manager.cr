@@ -165,7 +165,7 @@ class ConfigManager
       # If there's an error, return default branch
     end
 
-    "main"  # Default branch
+    "main" # Default branch
   end
 
   def self.repo_exists_in_config(config_path : String, dir_name : String) : Bool

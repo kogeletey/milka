@@ -1,7 +1,7 @@
 require "./base_command"
 
 class FetchCommand < BaseCommand
-  def execute(repositories : Array(RepositoryInfo)? = nil, repo_name : String? = nil)
+  def execute(repositories : Array(RepositoryInfo)? = nil, repo_name : String? = nil, additional_args : Array(String) = [] of String)
     unless repositories
       raise GitError.config_file_invalid("No repositories provided to fetch command")
     end

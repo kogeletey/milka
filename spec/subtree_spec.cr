@@ -337,7 +337,7 @@ describe "Subtree functionality" do
         File.exists?(config_path).should be_true
         config_content = File.read(config_path)
         config_content.includes?("dir = 'new_repo'").should be_true
-        config_content.includes?("source = 'git+subtree'").should be_false  # should not have subtree source
+        config_content.includes?("source = 'git+subtree'").should be_false # should not have subtree source
       end
     end
 

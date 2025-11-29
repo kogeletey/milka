@@ -12,5 +12,5 @@ abstract class BaseCommand
     @git_manager = GitManager.new
   end
 
-  abstract def execute(repositories : Array(RepositoryInfo)? = nil, repo_name : String? = nil)
+  abstract def execute(repositories : Array(RepositoryInfo)? = nil, repo_name : String? = nil, additional_args : Array(String) = [] of String)
 end

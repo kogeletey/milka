@@ -29,6 +29,8 @@ def get_command_from_string(command_string : String)
     :scan
   when "create"
     :create
+  when "remote"
+    :remote
   when "help"
     :help
   else
@@ -89,12 +91,13 @@ def main
   end
 
   repo_name = non_option_args.size > 1 ? non_option_args[1] : nil
+  additional_args = non_option_args.size > 2 ? non_option_args[2..-1] : [] of String
 
   # Initialize repositories variable
   repositories = [] of RepositoryInfo
 
-  # Load configuration for commands that need it (not for scan or init)
-  if command_string != "scan" && command_string != "init"
+  # Load configuration for commands that need it (not for scan, create, or remote commands)
+  if command_string != "scan" && command_string != "init" && command_string != "create" && command_string != "remote"
     begin
       config = ConfigManager.load_mise_config(config_path)
       Utils.print_info("Loaded #{config.repositories.size} repositories")
@@ -128,8 +131,8 @@ def main
       exit(1)
     end
 
-    if command_string == "scan" || command_string == "create"
-      command.execute(repositories, repo_name)
+    if command_string == "scan" || command_string == "create" || command_string == "remote"
+      command.execute(repositories, repo_name, additional_args)
     else
       command.execute(repositories, repo_name)
     end

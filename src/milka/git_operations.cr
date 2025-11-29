@@ -50,58 +50,58 @@ def stop_spinner(id : String, success : Bool)
   SPINNER_STATE.stop(id, success)
 end
 
-  # Helper method to run git commands with consistent error handling and output capture
-  def run_git_command(cmd : String, args : Array(String), chdir : String? = nil, spinner_id : String? = nil, operation : String? = nil, repo_name : String? = nil)
-    stdout_builder = String::Builder.new
-    stderr_builder = String::Builder.new
+# Helper method to run git commands with consistent error handling and output capture
+def run_git_command(cmd : String, args : Array(String), chdir : String? = nil, spinner_id : String? = nil, operation : String? = nil, repo_name : String? = nil)
+  stdout_builder = String::Builder.new
+  stderr_builder = String::Builder.new
 
-    result = Process.run(
-      cmd,
-      args,
-      output: stdout_builder,
-      error: stderr_builder,
-      chdir: chdir
-    )
+  result = Process.run(
+    cmd,
+    args,
+    output: stdout_builder,
+    error: stderr_builder,
+    chdir: chdir
+  )
 
-    success = result.success?
-    stdout_output = stdout_builder.to_s
-    stderr_output = stderr_builder.to_s
+  success = result.success?
+  stdout_output = stdout_builder.to_s
+  stderr_output = stderr_builder.to_s
 
-    if spinner_id
-      stop_spinner(spinner_id, success: success)
-    end
-
-    unless success
-      unless stdout_output.empty?
-        Utils.print_info("STDOUT: #{stdout_output.strip}")
-      end
-      unless stderr_output.empty?
-        Utils.print_error("STDERR: #{stderr_output.strip}")
-      end
-    end
-
-    # Return a hash with all the relevant information
-    {
-      success: success,
-      exit_code: result.exit_code,
-      stdout: stdout_output,
-      stderr: stderr_output
-    }
+  if spinner_id
+    stop_spinner(spinner_id, success: success)
   end
 
-  # Common method to check for authentication errors in git command output
-  def check_authentication_error(stderr_output : String, repo_url : String, repo_name : String? = nil)
-    auth_keywords = [
-      "Authentication failed", "Invalid username", "Permission denied",
-      "remote: Support for password authentication was removed",
-      "fatal: could not read Username",
-    ]
-
-    if auth_keywords.any? { |keyword| stderr_output.includes?(keyword) }
-      url_to_use = repo_name ? repo_name : repo_url
-      raise GitError.authentication_required("Git operation requires authentication for #{url_to_use}")
+  unless success
+    unless stdout_output.empty?
+      Utils.print_info("STDOUT: #{stdout_output.strip}")
+    end
+    unless stderr_output.empty?
+      Utils.print_error("STDERR: #{stderr_output.strip}")
     end
   end
+
+  # Return a hash with all the relevant information
+  {
+    success:   success,
+    exit_code: result.exit_code,
+    stdout:    stdout_output,
+    stderr:    stderr_output,
+  }
+end
+
+# Common method to check for authentication errors in git command output
+def check_authentication_error(stderr_output : String, repo_url : String, repo_name : String? = nil)
+  auth_keywords = [
+    "Authentication failed", "Invalid username", "Permission denied",
+    "remote: Support for password authentication was removed",
+    "fatal: could not read Username",
+  ]
+
+  if auth_keywords.any? { |keyword| stderr_output.includes?(keyword) }
+    url_to_use = repo_name ? repo_name : repo_url
+    raise GitError.authentication_required("Git operation requires authentication for #{url_to_use}")
+  end
+end
 
 # Git Operations Manager
 class GitManager

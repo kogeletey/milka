@@ -40,13 +40,13 @@ module Utils
       pull [repo-name]     Pull latest changes for a repository or all repositories (if no repo-name provided)
       push [repo-name]     Push changes for all repositories
       scan                 Scan for git repositories in the current directory and add them to reps.toml
-      create <repo-name>   Create a new empty git repository
+      create <repo-name> [remote-url]   Create a new git repository and optionally set its remote
+      remote <repo-name> <remote-url>   Add a remote to a local git repository
       help                 Show this help message
 
     Options:
       --config <path>      Path to reps.toml configuration file (default: ./.meta/reps.toml)
       --branch <branch>    Specify branch (default: from config or main)
-      --subtree            With scan: Add repositories with source = "git+subtree" (default: "git")
 
     Examples:
       milka clone                    Clone all repositories from reps.toml
@@ -58,9 +58,11 @@ module Utils
       milka push                     Push changes for all repositories
       milka push my-repo             Push changes for specific repository
       milka scan                     Scan current directory for git repos and add to reps.toml
-      milka scan --subtree           Scan and add repos with source = "git+subtree"
+      milka scan --subtree           Scan and add repos with subtree
       milka create my-repo           Create a new git repository
+      milka create my-repo https://example.com/user/repo.git    Create a new git repository with remote
       milka create my-subtree --subtree  Create a subtree git repository in existing directory
+      milka remote my-repo https://example.com/user/repo.git    Add remote to a local git repository
       milka --config /path/to/reps.toml clone
       milka --config /path/to/reps.toml --branch feature-branch clone my-repo
     USAGE

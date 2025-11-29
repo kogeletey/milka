@@ -36,7 +36,6 @@ class RepositoryUtils
       added_count += 1
     end
 
-    # If using subtree flag, also scan for non-git directories and initialize them as git repos
     if use_subtree
       Utils.print_info("Looking for non-git directories to initialize (for subtree use)...")
       non_git_dirs = scan_non_git_directories(root_path)
@@ -51,16 +50,13 @@ class RepositoryUtils
 
           Utils.print_info("Initializing git in directory: #{dir_name}")
 
-          # Initialize git repository in the directory
           begin
             result = run_git_command("git", ["init"], chdir: dir_path)
 
             if result[:success]
               Utils.print_success("  Initialized git repository in #{dir_name}")
 
-              # Add to config with subtree source
-              # Use a default remote that can be changed later
-              remote_url = "https://github.com/example/#{dir_name}.git"  # Placeholder
+              remote_url = "" # No remote URL by default
               branch = "main"
 
               ConfigManager.add_git_repo_to_config(config_path, dir_name, remote_url, branch, "git+subtree")
@@ -125,10 +121,10 @@ class RepositoryUtils
 
     # Return a hash with all the relevant information
     {
-      success: success,
+      success:   success,
       exit_code: result.exit_code,
-      stdout: stdout_output,
-      stderr: stderr_output
+      stdout:    stdout_output,
+      stderr:    stderr_output,
     }
   end
 
@@ -154,7 +150,7 @@ class RepositoryUtils
     # Add your repositories to this file using the format below
     # [[repo]]
     # dir = 'project'
-    # remote = 'https://github.com/username/my-project.git'
+    # remote = 'https://example.com/username/my-project.git'
     # branch = 'develop'
     TOML
 
@@ -164,7 +160,7 @@ class RepositoryUtils
     Utils.print_success("✅ Configuration file created at: #{config_path}")
     Utils.print_info("💡 Edit #{config_path} to add your repositories:")
     Utils.print_info("   - Replace 'my-project' with your local directory name")
-    Utils.print_info("   - Replace 'https://github.com/username/my-project.git' with your repository URL")
+    Utils.print_info("   - Replace 'https://example.com/username/my-project.git' with your repository URL")
     Utils.print_info("   - Set the appropriate branch (default: 'main')")
     Utils.print_info("   - Add more repositories by duplicating the [[repo]] block")
   end
