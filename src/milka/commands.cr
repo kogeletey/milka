@@ -27,8 +27,8 @@ def get_command_from_string(command_string : String)
     :push
   when "scan"
     :scan
-  when "init"
-    :init
+  when "create"
+    :create
   when "help"
     :help
   else
@@ -128,8 +128,8 @@ def main
       exit(1)
     end
 
-    if command_string == "scan" || command_string == "init"
-      command.execute
+    if command_string == "scan" || command_string == "create"
+      command.execute(repositories, repo_name)
     else
       command.execute(repositories, repo_name)
     end

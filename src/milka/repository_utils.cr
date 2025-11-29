@@ -137,7 +137,7 @@ class RepositoryUtils
     if File.exists?(config_path)
       Utils.print_error("❌ Error: Configuration file already exists at: #{config_path}")
       Utils.print_info("💡 To create a new configuration, remove the existing file first or use a different path.")
-      Utils.print_info("   Use: milka --config <new_path> init")
+      Utils.print_info("   Use: milka --config <new_path> create")
       raise GitError.config_file_invalid("Configuration file already exists: #{config_path}")
     end
 

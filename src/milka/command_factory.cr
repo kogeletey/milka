@@ -3,7 +3,7 @@ require "./commands/fetch_command"
 require "./commands/pull_command"
 require "./commands/push_command"
 require "./commands/scan_command"
-require "./commands/init_command"
+require "./commands/create_command"
 
 class CommandFactory
   def self.create_command(command_string : String, config_path : String, branch_override : String? = nil, use_subtree : Bool = false)
@@ -18,8 +18,8 @@ class CommandFactory
       PushCommand.new(config_path, branch_override)
     when "scan"
       ScanCommand.new(config_path, branch_override, use_subtree)
-    when "init"
-      InitCommand.new(config_path)
+    when "create"
+      CreateCommand.new(config_path, branch_override, use_subtree)
     else
       nil
     end

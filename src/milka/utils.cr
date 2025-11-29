@@ -40,7 +40,7 @@ module Utils
       pull [repo-name]     Pull latest changes for a repository or all repositories (if no repo-name provided)
       push [repo-name]     Push changes for all repositories
       scan                 Scan for git repositories in the current directory and add them to reps.toml
-      init                 Initialize a new reps.toml configuration file
+      create <repo-name>   Create a new empty git repository
       help                 Show this help message
 
     Options:
@@ -59,7 +59,8 @@ module Utils
       milka push my-repo             Push changes for specific repository
       milka scan                     Scan current directory for git repos and add to reps.toml
       milka scan --subtree           Scan and add repos with source = "git+subtree"
-      milka init                     Initialize a new reps.toml configuration file
+      milka create my-repo           Create a new git repository
+      milka create my-subtree --subtree  Create a subtree git repository in existing directory
       milka --config /path/to/reps.toml clone
       milka --config /path/to/reps.toml --branch feature-branch clone my-repo
     USAGE

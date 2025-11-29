@@ -314,4 +314,82 @@ describe "Subtree functionality" do
       content.includes?("source = 'git+subtree'").should be_true
     end
   end
+
+  describe "CreateCommand" do
+    it "should create new git repository in new directory" do
+      temp_dir = File.join(SUBTREE_SPEC_TEMP_DIR, "create_new_test")
+      Dir.mkdir_p(temp_dir)
+      Dir.cd(temp_dir) do
+        config_path = File.join(temp_dir, "reps.toml")
+
+        # Create command instance
+        command = CreateCommand.new(config_path, nil, false)
+        command.execute(nil, "new_repo")
+
+        # Check if directory and git repo were created
+        new_repo_path = File.join(temp_dir, "new_repo")
+        File.directory?(new_repo_path).should be_true
+
+        git_path = File.join(new_repo_path, ".git")
+        File.directory?(git_path).should be_true
+
+        # Check config file was created with git source (default, so no explicit source field)
+        File.exists?(config_path).should be_true
+        config_content = File.read(config_path)
+        config_content.includes?("dir = 'new_repo'").should be_true
+        config_content.includes?("source = 'git+subtree'").should be_false  # should not have subtree source
+      end
+    end
+
+    it "should create subtree repository in existing directory when --subtree flag is used" do
+      temp_dir = File.join(SUBTREE_SPEC_TEMP_DIR, "create_subtree_test")
+      Dir.mkdir_p(temp_dir)
+      Dir.cd(temp_dir) do
+        config_path = File.join(temp_dir, "reps.toml")
+
+        # Create an existing directory
+        existing_dir = File.join(temp_dir, "existing_repo")
+        Dir.mkdir_p(existing_dir)
+
+        # Create command instance with subtree flag
+        command = CreateCommand.new(config_path, nil, true)
+        command.execute(nil, "existing_repo")
+
+        # Check if git was initialized in the existing directory
+        git_path = File.join(existing_dir, ".git")
+        File.directory?(git_path).should be_true
+
+        # Check config file was created with subtree source
+        config_content = File.read(config_path)
+        config_content.includes?("dir = 'existing_repo'").should be_true
+        config_content.includes?("source = 'git+subtree'").should be_true
+      end
+    end
+
+    it "should handle existing git repository when using subtree flag" do
+      temp_dir = File.join(SUBTREE_SPEC_TEMP_DIR, "create_existing_git_test")
+      Dir.mkdir_p(temp_dir)
+      Dir.cd(temp_dir) do
+        config_path = File.join(temp_dir, "reps.toml")
+
+        # Create an existing git directory
+        existing_git_dir = File.join(temp_dir, "git_repo")
+        Dir.mkdir_p(existing_git_dir)
+        Process.run("git", ["init"], chdir: existing_git_dir)
+
+        # Create command instance with subtree flag
+        command = CreateCommand.new(config_path, nil, true)
+        command.execute(nil, "git_repo")
+
+        # Check that it's still a git repo
+        git_path = File.join(existing_git_dir, ".git")
+        File.directory?(git_path).should be_true
+
+        # Check config file was created with subtree source
+        config_content = File.read(config_path)
+        config_content.includes?("dir = 'git_repo'").should be_true
+        config_content.includes?("source = 'git+subtree'").should be_true
+      end
+    end
+  end
 end

@@ -362,8 +362,8 @@ describe "Milka" do
   end
 
   describe "get_command_from_string" do
-    it "recognizes init command" do
-      get_command_from_string("init").should eq(:init)
+    it "recognizes create command" do
+      get_command_from_string("create").should eq(:create)
       get_command_from_string("clone").should eq(:clone)
       get_command_from_string("invalid").should be_nil
     end
