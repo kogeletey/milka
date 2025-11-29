@@ -26,11 +26,19 @@ source = 'git+subtree'  # For subtree operations (new feature!)
 
 **New Feature: Subtree Support** - Use the `--subtree` flag to work only with repositories that have `source = "git+subtree"` in your configuration!
 
+## 🚀 Version 2025.11.6 Highlights (Latest Release)
+
+- **Enhanced error handling**: Improved error messages and handling for repository operations
+- **Performance improvements**: Faster repository scanning and operations with large numbers of repositories
+- **Configuration validation**: Automatic validation of `.meta/reps.toml` configuration file format
+- **Improved logging**: More detailed logging and progress information during operations
+
 ## 🚀 Version 2025.11.5 Highlights
 
 - **New `create` command**: Replace `init` with `milka create <repo-name>` to create new git repositories
 - **Subtree repository creation**: Use `milka create <dir> --subtree` to set up subtree repositories in existing directories
 - **Git initialization for non-git directories**: Enhanced scan functionality automatically initializes git when using `--subtree` flag
+
 
 ## Table of Contents
 - [Features](#features)

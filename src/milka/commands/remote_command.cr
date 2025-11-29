@@ -148,7 +148,8 @@ class RemoteCommand < BaseCommand
               updated_lines << line
             elsif line.strip.starts_with?("remote =") && current_repo_name == repo_name
               # Update the remote for this specific repo
-              indent = line.match(/^(\s*)/)[1] # Preserve indentation
+              match = line.match(/^(\s*)/)
+              indent = match ? match[1] : ""
               updated_lines << "#{indent}remote = '#{remote_url}'\n"
               in_repo_block = false # Reset for next repo
             else

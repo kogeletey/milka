@@ -312,7 +312,7 @@ describe "Milka" do
       content = File.read(config_path)
       content.should contain("# [[repo]]")
       content.should contain("# dir = 'project'")
-      content.should contain("# remote = 'https://github.com/username/my-project.git'")
+      content.should contain("# remote = 'https://example.com/username/my-project.git'")
       content.should contain("# branch = 'develop'")
     end
 
