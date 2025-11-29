@@ -46,20 +46,24 @@ module Utils
     Options:
       --config <path>      Path to reps.toml configuration file (default: ./.meta/reps.toml)
       --branch <branch>    Specify branch (default: from config or main)
+      --subtree            Only process repositories with source = "git+subtree"
 
     Examples:
       milka clone                    Clone all repositories from reps.toml
       milka clone my-repo            Clone specific repository
+      milka clone --subtree          Clone only subtree repositories
       milka fetch                    Fetch updates for all repositories
       milka fetch my-repo            Fetch updates for specific repository
+      milka fetch --subtree          Fetch only subtree repositories
       milka pull                     Pull latest changes for all repositories
       milka pull my-repo             Pull latest changes for specific repository
-      milka push                    Push changes for all repositories
-      milka push my-repo             Push changes for specific repository
+      milka pull --subtree           Pull only subtree repositories
+      milka push --subtree           Push only subtree repositories
       milka scan                     Scan current directory for git repos and add to reps.toml
       milka init                     Initialize a new reps.toml configuration file
       milka --config /path/to/reps.toml clone
       milka --config /path/to/reps.toml --branch feature-branch clone my-repo
+      milka --config /path/to/reps.toml clone --subtree
     USAGE
   end
 

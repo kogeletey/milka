@@ -6,8 +6,9 @@ abstract class BaseCommand
   protected getter git_manager : GitManager
   protected getter config_path : String
   protected getter branch_override : String?
+  protected getter use_subtree : Bool
 
-  def initialize(@config_path : String, @branch_override : String? = nil)
+  def initialize(@config_path : String, @branch_override : String? = nil, @use_subtree : Bool = false)
     @git_manager = GitManager.new
   end
 

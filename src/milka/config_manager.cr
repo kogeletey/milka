@@ -44,8 +44,9 @@ class ConfigManager
             url = repo_hash["remote"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'remote' field")
             branch = repo_hash["branch"]?.try(&.as_s) || "main"
             commit = repo_hash["commit"]?.try(&.as_s) || ""
+            source = repo_hash["source"]?.try(&.as_s) || "git"
 
-            repositories << RepositoryInfo.new(name, url, branch, commit)
+            repositories << RepositoryInfo.new(name, url, branch, commit, source)
           end
         when TOML::Any
           # Check if the TOML::Any represents an array or a hash
@@ -70,8 +71,9 @@ class ConfigManager
               url = repo_hash["remote"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'remote' field")
               branch = repo_hash["branch"]?.try(&.as_s) || "main"
               commit = repo_hash["commit"]?.try(&.as_s) || ""
+              source = repo_hash["source"]?.try(&.as_s) || "git"
 
-              repositories << RepositoryInfo.new(name, url, branch, commit)
+              repositories << RepositoryInfo.new(name, url, branch, commit, source)
             end
           else
             # It's a single object
@@ -80,8 +82,9 @@ class ConfigManager
             url = repo_hash["remote"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'remote' field")
             branch = repo_hash["branch"]?.try(&.as_s) || "main"
             commit = repo_hash["commit"]?.try(&.as_s) || ""
+            source = repo_hash["source"]?.try(&.as_s) || "git"
 
-            repositories << RepositoryInfo.new(name, url, branch, commit)
+            repositories << RepositoryInfo.new(name, url, branch, commit, source)
           end
         else
           raise GitError.config_file_invalid("Unexpected 'repo' data type: #{repo_data.class}")

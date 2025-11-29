@@ -106,6 +106,16 @@ end
 # Git Operations Manager
 class GitManager
   def clone_repository(repo : RepositoryInfo)
+    # Handle different sources
+    case repo.source
+    when "git+subtree"
+      clone_subtree_repository(repo)
+    else
+      clone_standard_repository(repo)
+    end
+  end
+
+  private def clone_standard_repository(repo : RepositoryInfo)
     current_dir = Dir.current
     local_path = repo.name
     absolute_local_path = File.join(current_dir, local_path)
@@ -168,7 +178,36 @@ class GitManager
     end
   end
 
+  private def clone_subtree_repository(repo : RepositoryInfo)
+    current_dir = Dir.current
+    prefix = repo.name
+
+    spinner_id = start_spinner("Adding subtree #{repo.name}")
+    begin
+      result = run_git_command("git", ["subtree", "add", "--prefix", prefix, repo.url, repo.branch, "--squash"], chdir: current_dir, spinner_id: spinner_id)
+
+      unless result[:success]
+        check_authentication_error(result[:stderr], repo.url, repo.name)
+
+        raise GitError.subtree_add_failed("Failed to add subtree from #{repo.url} to #{prefix}")
+      end
+    rescue e
+      stop_spinner(spinner_id, success: false)
+      raise e
+    end
+  end
+
   def fetch_repository(repo : RepositoryInfo)
+    # Handle different sources
+    case repo.source
+    when "git+subtree"
+      fetch_subtree_repository(repo)
+    else
+      fetch_standard_repository(repo)
+    end
+  end
+
+  private def fetch_standard_repository(repo : RepositoryInfo)
     current_dir = Dir.current
     local_path = repo.name
     absolute_local_path = File.join(current_dir, local_path)
@@ -191,7 +230,37 @@ class GitManager
     end
   end
 
+  private def fetch_subtree_repository(repo : RepositoryInfo)
+    # For subtree, we don't have a separate fetch operation, it's part of pull
+    # But we can fetch the remote without doing the merge
+    current_dir = Dir.current
+
+    spinner_id = start_spinner("Fetching subtree #{repo.name}")
+    begin
+      result = run_git_command("git", ["fetch", repo.url, repo.branch], chdir: current_dir, spinner_id: spinner_id)
+
+      unless result[:success]
+        check_authentication_error(result[:stderr], repo.url, repo.name)
+
+        raise GitError.fetch_failed("Failed to fetch subtree repository #{repo.name}")
+      end
+    rescue e
+      stop_spinner(spinner_id, success: false)
+      raise e
+    end
+  end
+
   def pull_repository(repo : RepositoryInfo)
+    # Handle different sources
+    case repo.source
+    when "git+subtree"
+      pull_subtree_repository(repo)
+    else
+      pull_standard_repository(repo)
+    end
+  end
+
+  private def pull_standard_repository(repo : RepositoryInfo)
     current_dir = Dir.current
     local_path = repo.name
     absolute_local_path = File.join(current_dir, local_path)
@@ -214,7 +283,36 @@ class GitManager
     end
   end
 
+  private def pull_subtree_repository(repo : RepositoryInfo)
+    current_dir = Dir.current
+    prefix = repo.name
+
+    spinner_id = start_spinner("Pulling subtree #{repo.name}")
+    begin
+      result = run_git_command("git", ["subtree", "pull", "--prefix", prefix, repo.url, repo.branch, "--squash"], chdir: current_dir, spinner_id: spinner_id)
+
+      unless result[:success]
+        check_authentication_error(result[:stderr], repo.url, repo.name)
+
+        raise GitError.subtree_pull_failed("Failed to pull subtree from #{repo.url}")
+      end
+    rescue e
+      stop_spinner(spinner_id, success: false)
+      raise e
+    end
+  end
+
   def push_repository(repo : RepositoryInfo)
+    # Handle different sources
+    case repo.source
+    when "git+subtree"
+      push_subtree_repository(repo)
+    else
+      push_standard_repository(repo)
+    end
+  end
+
+  private def push_standard_repository(repo : RepositoryInfo)
     current_dir = Dir.current
     local_path = repo.name
     absolute_local_path = File.join(current_dir, local_path)
@@ -230,6 +328,25 @@ class GitManager
         check_authentication_error(result[:stderr], repo.url, repo.name)
 
         raise GitError.push_failed("Failed to push repository #{repo.name}")
+      end
+    rescue e
+      stop_spinner(spinner_id, success: false)
+      raise e
+    end
+  end
+
+  private def push_subtree_repository(repo : RepositoryInfo)
+    current_dir = Dir.current
+    prefix = repo.name
+
+    spinner_id = start_spinner("Pushing subtree #{repo.name}")
+    begin
+      result = run_git_command("git", ["subtree", "push", "--prefix", prefix, repo.url, repo.branch], chdir: current_dir, spinner_id: spinner_id)
+
+      unless result[:success]
+        check_authentication_error(result[:stderr], repo.url, repo.name)
+
+        raise GitError.subtree_push_failed("Failed to push subtree to #{repo.url}")
       end
     rescue e
       stop_spinner(spinner_id, success: false)

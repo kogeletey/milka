@@ -27,4 +27,16 @@ class GitError < Exception
   def self.authentication_required(message)
     new("Authentication required: #{message}. Please provide a username/password or use a personal access token for private repositories.")
   end
+
+  def self.subtree_add_failed(message)
+    new("Subtree add failed: #{message}")
+  end
+
+  def self.subtree_pull_failed(message)
+    new("Subtree pull failed: #{message}")
+  end
+
+  def self.subtree_push_failed(message)
+    new("Subtree push failed: #{message}")
+  end
 end

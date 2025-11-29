@@ -41,6 +41,7 @@ def main
   args = ARGV
   config_path = ".meta/reps.toml"
   branch_override = nil
+  use_subtree = false
   non_option_args = [] of String
 
   i = 0
@@ -53,6 +54,10 @@ def main
     elsif arg == "--branch" && i + 1 < args.size
       branch_override = args[i + 1]
       i += 2
+      next
+    elsif arg == "--subtree"
+      use_subtree = true
+      i += 1
       next
     elsif arg.starts_with?("--")
       i += 1
@@ -98,7 +103,7 @@ def main
       # Override branch if specified
       if branch_override
         repositories = repositories.map do |repo|
-          RepositoryInfo.new(repo.name, repo.url, branch_override, repo.latest_commit)
+          RepositoryInfo.new(repo.name, repo.url, branch_override, repo.latest_commit, repo.source)
         end
       end
     rescue e : GitError
@@ -114,6 +119,15 @@ def main
   end
 
   begin
+    # Create the correct command with subtree flag
+    command = CommandFactory.create_command(command_string, config_path, branch_override, use_subtree)
+
+    unless command
+      Utils.print_error("Error: Invalid command '#{command_string}' after processing flags")
+      Utils.print_usage
+      exit(1)
+    end
+
     if command_string == "scan" || command_string == "init"
       command.execute
     else

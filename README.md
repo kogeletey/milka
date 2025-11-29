@@ -16,7 +16,15 @@ Example config:
 dir = 'my-project'
 remote = 'https://github.com/username/my-project.git'
 branch = 'main'
+
+[[repo]]
+dir = 'my-submodule'
+remote = 'https://github.com/username/submodule.git'
+branch = 'main'
+source = 'git+subtree'  # For subtree operations (new feature!)
 ```
+
+**New Feature: Subtree Support** - Use the `--subtree` flag to work only with repositories that have `source = "git+subtree"` in your configuration!
 
 ## Table of Contents
 - [Features](#features)
@@ -34,6 +42,7 @@ branch = 'main'
 - **Fetch updates** from multiple repositories simultaneously
 - **Pull latest changes** from all configured repositories
 - **Push changes** to multiple repositories at once
+- **Subtree support** - Use git subtree operations with `--subtree` flag (new!)
 - **Scan** current directory for existing git repositories and add them to configuration
 - **Colored output** for better readability
 - **Spinner indicators** for ongoing operations
@@ -135,6 +144,7 @@ Clone repositories specified in the configuration file.
 ```bash
 milka clone                    # Clone all repositories
 milka clone repo-name          # Clone specific repository
+milka clone --subtree          # Clone only repositories with source = "git+subtree" (new!)
 ```
 
 ### `fetch`
@@ -143,6 +153,7 @@ Fetch updates from remote repositories without merging.
 ```bash
 milka fetch                    # Fetch all repositories
 milka fetch repo-name          # Fetch specific repository
+milka fetch --subtree          # Fetch only repositories with source = "git+subtree" (new!)
 ```
 
 ### `pull`
@@ -151,6 +162,7 @@ Pull latest changes from remote repositories.
 ```bash
 milka pull                     # Pull all repositories
 milka pull repo-name           # Pull specific repository
+milka pull --subtree           # Pull only repositories with source = "git+subtree" (new!)
 ```
 
 ### `push`
@@ -159,6 +171,7 @@ Push local changes to remote repositories.
 ```bash
 milka push                     # Push all repositories
 milka push repo-name           # Push specific repository
+milka push --subtree           # Push only repositories with source = "git+subtree" (new!)
 ```
 
 ### `init`
@@ -186,6 +199,7 @@ milka help                     # Show help message
 
 - `--config <path>`: Specify custom path to configuration file (default: `./.meta/reps.toml`)
 - `--branch <branch>`: Override branch for operations (default: branch from config or 'main')
+- `--subtree`: Only process repositories with `source = "git+subtree"` (new!)
 
 ## Usage Examples
 
@@ -199,9 +213,19 @@ Clone a specific repository:
 milka clone my-repo
 ```
 
+Clone only subtree repositories (new!):
+```bash
+milka clone --subtree
+```
+
 Pull changes from all repositories:
 ```bash
 milka pull
+```
+
+Pull changes only from subtree repositories (new!):
+```bash
+milka pull --subtree
 ```
 
 Fetch updates for a specific repository:
@@ -209,9 +233,19 @@ Fetch updates for a specific repository:
 milka fetch my-repo
 ```
 
+Fetch only subtree repositories (new!):
+```bash
+milka fetch --subtree
+```
+
 Push changes to all repositories:
 ```bash
 milka push
+```
+
+Push changes only to subtree repositories (new!):
+```bash
+milka push --subtree
 ```
 
 Pull changes from all repositories using a specific branch:
@@ -219,9 +253,19 @@ Pull changes from all repositories using a specific branch:
 milka --branch develop pull
 ```
 
+Use subtree operations with custom branch (new!):
+```bash
+milka --branch feature-branch pull --subtree
+```
+
 Use a custom configuration file:
 ```bash
 milka --config /path/to/custom.toml pull
+```
+
+Use subtree operations with custom configuration (new!):
+```bash
+milka --config /path/to/custom.toml pull --subtree
 ```
 
 Scan current directory and add git repositories to configuration:
