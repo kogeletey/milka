@@ -96,8 +96,21 @@ def main
   # Initialize repositories variable
   repositories = [] of RepositoryInfo
 
+  # Check if this is a URL-based clone operation
+  is_url_clone = command_string == "clone" &&
+                 non_option_args.size >= 2 &&
+                 (non_option_args[1].starts_with?("http://") || non_option_args[1].starts_with?("https://"))
+
+  # Also check for the reverse case: custom_name URL
+  is_url_clone = is_url_clone || (
+    command_string == "clone" &&
+    non_option_args.size >= 3 &&
+    (non_option_args[2].starts_with?("http://") || non_option_args[2].starts_with?("https://"))
+  )
+
   # Load configuration for commands that need it (not for scan, create, or remote commands)
-  if command_string != "scan" && command_string != "init" && command_string != "create" && command_string != "remote"
+  # Also skip loading config if this is a URL clone operation
+  if command_string != "scan" && command_string != "init" && command_string != "create" && command_string != "remote" && !is_url_clone
     begin
       config = ConfigManager.load_mise_config(config_path)
       Utils.print_info("Loaded #{config.repositories.size} repositories")
@@ -131,7 +144,7 @@ def main
       exit(1)
     end
 
-    if command_string == "scan" || command_string == "create" || command_string == "remote"
+    if command_string == "scan" || command_string == "create" || command_string == "remote" || command_string == "clone"
       command.execute(repositories, repo_name, additional_args)
     else
       command.execute(repositories, repo_name)
