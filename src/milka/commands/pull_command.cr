@@ -13,22 +13,9 @@ class PullCommand < BaseCommand
         exit(1)
       end
 
-      # If using subtree flag, only process if repo source is git+subtree
-      if @use_subtree && repo.source != "git+subtree"
-        Utils.print_warning("Repository '#{repo_name}' is not a subtree source, skipping.")
-        return
-      end
-
       git_manager.pull_repository(repo)
     else
-      # Filter repositories if using subtree flag
-      filtered_repos = @use_subtree ? repositories.select { |repo| repo.source == "git+subtree" } : repositories
-      if @use_subtree && filtered_repos.empty?
-        Utils.print_warning("No repositories with source 'git+subtree' found")
-        return
-      end
-
-      git_manager.process_all_repositories(filtered_repos, "pull")
+      git_manager.process_all_repositories(repositories, "pull")
     end
   end
 end

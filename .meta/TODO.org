@@ -1,6 +1,6 @@
 #+title: TODO
 
-** TODO Support subtree :1:
+** DONE Support subtree :1:
 
 Allows one commit to push to all repositories
 

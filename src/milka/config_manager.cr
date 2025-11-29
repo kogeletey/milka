@@ -153,6 +153,13 @@ class ConfigManager
       if result.success?
         branch = stdout_builder.to_s.strip
         return branch unless branch.empty?
+      else
+        # Check if the error is because HEAD doesn't exist (no commits yet)
+        stderr_output = stderr_builder.to_s
+        if stderr_output.includes?("HEAD") && stderr_output.includes?("unknown revision")
+          # If HEAD doesn't exist, default to main
+          return "main"
+        end
       end
     rescue
       # If there's an error, return default branch
@@ -221,7 +228,7 @@ class ConfigManager
     false
   end
 
-  def self.add_git_repo_to_config(config_path : String, dir_name : String, remote_url : String, branch : String)
+  def self.add_git_repo_to_config(config_path : String, dir_name : String, remote_url : String, branch : String, source : String = "git")
     # Create the directory if it doesn't exist
     config_dir = File.dirname(config_path)
     Dir.mkdir_p(config_dir) unless File.directory?(config_dir)
@@ -233,7 +240,8 @@ class ConfigManager
     new_entry = "\n[[repo]]\n"
     new_entry += "dir = '#{dir_name}'\n"
     new_entry += "remote = '#{remote_url}'\n"
-    new_entry += "branch = '#{branch}'\n\n"
+    new_entry += "branch = '#{branch}'\n"
+    new_entry += "source = '#{source}'\n\n" if source != "git"
 
     # Append the new entry to the config file
     File.open(config_path, "a") do |file|

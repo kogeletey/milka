@@ -4,7 +4,7 @@ require "../utils"
 require "../repository_utils"
 
 class InitCommand
-  def initialize(@config_path : String)
+  def initialize(@config_path : String, @branch_override : String? = nil, @use_subtree : Bool = false)
   end
 
   def execute(repositories : Array(RepositoryInfo)? = nil, repo_name : String? = nil)

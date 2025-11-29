@@ -9,15 +9,15 @@ class CommandFactory
   def self.create_command(command_string : String, config_path : String, branch_override : String? = nil, use_subtree : Bool = false)
     case command_string
     when "clone"
-      CloneCommand.new(config_path, branch_override, use_subtree)
+      CloneCommand.new(config_path, branch_override)
     when "fetch"
-      FetchCommand.new(config_path, branch_override, use_subtree)
+      FetchCommand.new(config_path, branch_override)
     when "pull"
-      PullCommand.new(config_path, branch_override, use_subtree)
+      PullCommand.new(config_path, branch_override)
     when "push"
-      PushCommand.new(config_path, branch_override, use_subtree)
+      PushCommand.new(config_path, branch_override)
     when "scan"
-      ScanCommand.new(config_path)
+      ScanCommand.new(config_path, branch_override, use_subtree)
     when "init"
       InitCommand.new(config_path)
     else
