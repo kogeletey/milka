@@ -7,8 +7,8 @@ class CloneCommand < BaseCommand
     end
 
     if repo_name
-      # Check if repo_name is a URL (contains http:// or https://)
-      if repo_name.starts_with?("http://") || repo_name.starts_with?("https://")
+      # Check if repo_name is a URL (contains http://, https://, or git@)
+      if repo_name.starts_with?("http://") || repo_name.starts_with?("https://") || repo_name.starts_with?("git@")
         # Handle case: milka clone <URL> [custom_dir_name]
         if additional_args.empty?
           # No custom name provided, use name from URL
@@ -18,7 +18,7 @@ class CloneCommand < BaseCommand
           custom_name = additional_args[0]
           clone_from_url(repo_name, custom_name, repositories)
         end
-      elsif additional_args.size == 1 && (additional_args[0].starts_with?("http://") || additional_args[0].starts_with?("https://"))
+      elsif additional_args.size == 1 && (additional_args[0].starts_with?("http://") || additional_args[0].starts_with?("https://") || additional_args[0].starts_with?("git@"))
         # Handle case: milka clone <custom_dir_name> <URL>
         url = additional_args[0]
         custom_name = repo_name
@@ -117,6 +117,20 @@ class CloneCommand < BaseCommand
     # Remove trailing slashes
     clean_url = url.gsub(/\/$/, "")
 
+    if clean_url.starts_with?("git@")
+      # Handle SSH URLs like git@github.com:user/repo.git
+      # Extract the part after the colon
+      path_part = clean_url.split(":")[1]?
+      if path_part
+        # Extract the last part after the last slash
+        name = File.basename(path_part, ".git")
+        # Remove any query parameters or fragments
+        name = name.split(/[?#]/)[0]
+        return name
+      end
+    end
+
+    # Handle HTTP/HTTPS URLs
     # Extract the last part after the last slash
     # Handle both .git ending and regular URLs
     name = File.basename(clean_url, ".git")
