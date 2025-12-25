@@ -26,7 +26,14 @@ source = 'git+subtree'  # For subtree operations (new feature!)
 
 **New Feature: Subtree Support** - Use the `--subtree` flag to work only with repositories that have `source = "git+subtree"` in your configuration!
 
-## 🚀 Version 2025.11.6 Highlights (Latest Release)
+## 🚀 Version 2025.11.7 Highlights (Latest Release)
+
+- **New `github` command**: Scan and clone all repositories from a GitHub organization or user with `milka github <org-name>`
+- **Optional cloning**: Use `milka github <org-name> --clone` to both add repos to config and clone them
+- **GitHub API integration**: Automatic pagination for organizations with many repositories
+- **Token authentication**: Support for `GITHUB_TOKEN` and `GH_TOKEN` environment variables for private repos and higher rate limits
+
+## 🚀 Version 2025.11.6 Highlights
 
 - **Enhanced error handling**: Improved error messages and handling for repository operations
 - **Performance improvements**: Faster repository scanning and operations with large numbers of repositories
@@ -58,6 +65,7 @@ source = 'git+subtree'  # For subtree operations (new feature!)
 - **Push changes** to multiple repositories at once
 - **Subtree support** - Use git subtree operations with `--subtree` flag (new!)
 - **Scan** current directory for existing git repositories and add them to configuration
+- **GitHub organization scanning** - Fetch and clone all repositories from a GitHub organization or user
 - **Colored output** for better readability
 - **Spinner indicators** for ongoing operations
 - **Authentication support** for private repositories using personal access tokens
@@ -203,6 +211,17 @@ milka scan                     # Scan and add git repos to config (with source =
 milka scan --subtree           # Scan and add git repos to config (with source = "git+subtree")
 ```
 
+### `github`
+Scan GitHub organization or user repositories and add them to the configuration file. Optionally clone them as well.
+
+```bash
+milka github myorg             # Scan GitHub org 'myorg' and add all repos to config
+milka github myorg --clone     # Scan and also clone all repositories
+milka github myuser --subtree  # Scan user 'myuser' and add repos with subtree source
+```
+
+**Note**: For private repositories or to avoid rate limits, set the `GITHUB_TOKEN` or `GH_TOKEN` environment variable with your GitHub personal access token.
+
 ### `help`
 Show usage information.
 
@@ -255,8 +274,15 @@ milka --config /path/to/custom.toml pull
 
 Scan current directory and add git repositories to configuration:
 ```bash
-milka scan                     # Add repos plane, not git init 
+milka scan                     # Add repos plane, not git init
 milka scan --subtree           # Add repos with subtree functionality
+```
+
+Scan and clone all repositories from a GitHub organization:
+```bash
+milka github myorg             # Add all org repos to config
+milka github myorg --clone     # Add to config and clone all repos
+GITHUB_TOKEN=your_token milka github private-org --clone  # With authentication
 ```
 
 ## Author
