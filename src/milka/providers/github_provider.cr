@@ -2,12 +2,18 @@ require "http/client"
 require "json"
 require "./issue_provider"
 require "../types/issue_info"
+require "../types/comment_info"
 require "../types/git_error"
 
 # GitHub issue provider - fetches issues from GitHub API
 class GitHubIssueProvider < IssueProvider
   API_BASE = "https://api.github.com"
   USER_AGENT = "milka-cli"
+
+  property fetch_comments : Bool
+
+  def initialize(@fetch_comments : Bool = true)
+  end
 
   def name : String
     "GitHub"
@@ -25,7 +31,7 @@ class GitHubIssueProvider < IssueProvider
 
       case response.status_code
       when 200
-        parsed_issues = parse_issues_response(response.body)
+        parsed_issues = parse_issues_response(response.body, owner, repo)
         break if parsed_issues.empty?
 
         issues.concat(parsed_issues)
@@ -49,7 +55,61 @@ class GitHubIssueProvider < IssueProvider
       end
     end
 
+    # Fetch comments for each issue if enabled
+    if @fetch_comments
+      issues.each do |issue|
+        fetch_comments_for_issue(owner, repo, issue)
+      end
+    end
+
     issues
+  end
+
+  private def fetch_comments_for_issue(owner : String, repo : String, issue : IssueInfo)
+    url = "#{API_BASE}/repos/#{owner}/#{repo}/issues/#{issue.number}/comments"
+
+    begin
+      response = make_request(url)
+
+      if response.status_code == 200
+        comments = parse_comments_response(response.body)
+        issue.comments = comments
+      end
+    rescue
+      # Silently ignore comment fetch errors - issue data is still valuable
+    end
+  end
+
+  private def parse_comments_response(body : String) : Array(CommentInfo)
+    comments = [] of CommentInfo
+
+    begin
+      json = JSON.parse(body)
+
+      json.as_a.each do |item|
+        id = item["id"].as_i64
+        body_text = item["body"]?.try(&.as_s?) || ""
+        author = item["user"]?.try(&.["login"]?.try(&.as_s)) || "unknown"
+        author_url = item["user"]?.try(&.["html_url"]?.try(&.as_s)) || ""
+        created_at = item["created_at"]?.try(&.as_s) || ""
+        updated_at = item["updated_at"]?.try(&.as_s) || ""
+        html_url = item["html_url"]?.try(&.as_s) || ""
+
+        comments << CommentInfo.new(
+          id: id,
+          body: body_text,
+          author: author,
+          author_url: author_url,
+          created_at: created_at,
+          updated_at: updated_at,
+          html_url: html_url
+        )
+      end
+    rescue e : JSON::ParseException
+      # Return empty array on parse error
+    end
+
+    comments
   end
 
   private def make_request(url : String) : HTTP::Client::Response
@@ -69,12 +129,14 @@ class GitHubIssueProvider < IssueProvider
         headers["Authorization"] = "token #{token}"
       end
 
-      return client.get(uri.path.not_nil! + "?" + uri.query.not_nil!, headers: headers)
+      query = uri.query ? "?#{uri.query}" : ""
+      return client.get(uri.path.not_nil! + query, headers: headers)
     end
   end
 
-  private def parse_issues_response(body : String) : Array(IssueInfo)
+  private def parse_issues_response(body : String, owner : String, repo : String) : Array(IssueInfo)
     issues = [] of IssueInfo
+    context_url = "https://github.com/#{owner}/#{repo}"
 
     begin
       json = JSON.parse(body)
@@ -90,6 +152,7 @@ class GitHubIssueProvider < IssueProvider
         created_at = item["created_at"].as_s
         updated_at = item["updated_at"].as_s
         author = item["user"]?.try(&.["login"]?.try(&.as_s)) || "unknown"
+        author_url = item["user"]?.try(&.["html_url"]?.try(&.as_s)) || ""
         html_url = item["html_url"]?.try(&.as_s) || ""
 
         labels = [] of String
@@ -105,8 +168,10 @@ class GitHubIssueProvider < IssueProvider
           created_at: created_at,
           updated_at: updated_at,
           author: author,
+          author_url: author_url,
           labels: labels,
-          html_url: html_url
+          html_url: html_url,
+          context_url: context_url
         )
       end
     rescue e : JSON::ParseException

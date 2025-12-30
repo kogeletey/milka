@@ -1,5 +1,6 @@
 require "../types/repository_info"
 require "../types/issue_info"
+require "../types/comment_info"
 require "../types/git_error"
 require "../providers/issue_provider"
 require "../providers/github_provider"
@@ -32,8 +33,8 @@ class IssuesCommand
     parse_additional_args(additional_args)
 
     # Validate format
-    unless ["org", "md"].includes?(@output_format)
-      raise GitError.new("Invalid output format '#{@output_format}'. Supported formats: org, md")
+    unless ["org", "md", "json"].includes?(@output_format)
+      raise GitError.new("Invalid output format '#{@output_format}'. Supported formats: org, md, json")
     end
 
     # Validate state filter
@@ -192,6 +193,8 @@ class IssuesCommand
       content = case @output_format
                 when "md"
                   issue.to_md
+                when "json"
+                  issue.to_json_ld
                 else
                   issue.to_org
                 end
