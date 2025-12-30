@@ -32,8 +32,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Build static binary using container for Linux
-      - name: Build static binary using Alpine container
+      # Build static binary using container for Linux (default)
+      - name: Build static binary using Alpine container (default)
         run: |
           # Build the container and extract the static binary
           docker build -f ./.meta/packaging/static-builds/Containerfile -t milka-static-build .
@@ -44,17 +44,32 @@ jobs:
           docker rmi milka-static-build > /dev/null
           chmod +x ./milka
 
-      # Package the binary
+      # Build static binary with github plugin
+      - name: Build static binary using Alpine container (with github plugin)
+        run: |
+          # Build the container and extract the static binary
+          docker build -f ./.meta/packaging/static-builds/Containerfile.github -t milka-github-static-build .
+          # Create a temporary container to extract the binary
+          docker create --name temp-container-github milka-github-static-build
+          docker cp temp-container-github:/milka-github ./milka-github
+          docker rm -v temp-container-github > /dev/null
+          docker rmi milka-github-static-build > /dev/null
+          chmod +x ./milka-github
+
+      # Package the binaries
       - name: Package release asset
         run: |
           zip -r "milka-${{ matrix.platform }}.zip" "${{ matrix.bin }}"
+          zip -r "milka-github-${{ matrix.platform }}.zip" "milka-github"
 
-          # Generate checksum for the archive
-          if command -v sha256sum > /dev/null; then
-            sha256sum "milka-${{ matrix.platform }}.zip" > "milka-${{ matrix.platform }}.zip.sha256"
-          elif command -v shasum > /dev/null; then
-            shasum -a 256 "milka-${{ matrix.platform }}.zip" > "milka-${{ matrix.platform }}.zip.sha256"
-          fi
+          # Generate checksums for the archives
+          for file in milka-${{ matrix.platform }}.zip milka-github-${{ matrix.platform }}.zip; do
+            if command -v sha256sum > /dev/null; then
+              sha256sum "$file" > "$file.sha256"
+            elif command -v shasum > /dev/null; then
+              shasum -a 256 "$file" > "$file.sha256"
+            fi
+          done
 
       # Upload the release assets
       - name: Release
@@ -63,5 +78,7 @@ jobs:
           files: |
             milka-${{ matrix.platform }}.zip
             milka-${{ matrix.platform }}.zip.sha256
+            milka-github-${{ matrix.platform }}.zip
+            milka-github-${{ matrix.platform }}.zip.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

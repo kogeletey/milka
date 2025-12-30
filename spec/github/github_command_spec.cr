@@ -1,3 +1,4 @@
+{% if flag?(:github_plugin) %}
 require "spec"
 require "file_utils"
 require "../../src/milka/types/repository_info"
@@ -108,3 +109,4 @@ describe "github command string parsing" do
     result.should eq(:github)
   end
 end
+{% end %}

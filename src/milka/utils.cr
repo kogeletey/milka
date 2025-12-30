@@ -29,6 +29,7 @@ module Utils
   end
 
   def self.print_usage
+    {% if flag?(:github_plugin) %}
     puts <<-USAGE
     Milka - A command-line tool for managing multiple git repositories
 
@@ -71,6 +72,49 @@ module Utils
       milka --config /path/to/reps.toml clone
       milka --config /path/to/reps.toml --branch feature-branch clone my-repo
     USAGE
+    {% else %}
+    puts <<-USAGE
+    Milka - A command-line tool for managing multiple git repositories
+
+    Usage: milka <command> [repo-name] [options]
+
+    Commands:
+      clone [repo-name]    Clone a repository or all repositories (if no repo-name provided)
+      fetch [repo-name]    Fetch updates for a repository or all repositories (if no repo-name provided)
+      pull [repo-name]     Pull latest changes for a repository or all repositories (if no repo-name provided)
+      push [repo-name]     Push changes for all repositories
+      scan                 Scan for git repositories in the current directory and add them to reps.toml
+      create <repo-name> [remote-url]   Create a new git repository and optionally set its remote
+      remote <repo-name> <remote-url>   Add a remote to a local git repository
+      help                 Show this help message
+
+    Options:
+      --config <path>      Path to reps.toml configuration file (default: ./.meta/reps.toml)
+      --branch <branch>    Specify branch (default: from config or main)
+      --subtree            Use git subtree operations (for scan, create commands)
+
+    Examples:
+      milka clone                    Clone all repositories from reps.toml
+      milka clone my-repo            Clone specific repository
+      milka fetch                    Fetch updates for all repositories
+      milka fetch my-repo            Fetch updates for specific repository
+      milka pull                     Pull latest changes for all repositories
+      milka pull my-repo             Pull latest changes for specific repository
+      milka push                     Push changes for all repositories
+      milka push my-repo             Push changes for specific repository
+      milka scan                     Scan current directory for git repos and add to reps.toml
+      milka scan --subtree           Scan and add repos with subtree
+      milka create my-repo           Create a new git repository
+      milka create my-repo https://example.com/user/repo.git    Create a new git repository with remote
+      milka create my-subtree --subtree  Create a subtree git repository in existing directory
+      milka remote my-repo https://example.com/user/repo.git    Add remote to a local git repository
+      milka --config /path/to/reps.toml clone
+      milka --config /path/to/reps.toml --branch feature-branch clone my-repo
+
+    Note: Build with `-Dgithub_plugin` flag to enable the github command for scanning
+    GitHub organizations and users (requires shards build milka-github -Dgithub_plugin).
+    USAGE
+    {% end %}
   end
 
   def self.find_repository_in(repositories : Array(RepositoryInfo), named name : String)

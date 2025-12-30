@@ -26,9 +26,15 @@ source = 'git+subtree'  # For subtree operations (new feature!)
 
 **New Feature: Subtree Support** - Use the `--subtree` flag to work only with repositories that have `source = "git+subtree"` in your configuration!
 
-## 🚀 Version 2025.11.7 Highlights (Latest Release)
+## 🚀 Version 2025.11.8 Highlights (Latest Release)
 
-- **New `github` command**: Scan and clone all repositories from a GitHub organization or user with `milka github <org-name>`
+- **Plugin architecture for github command**: The `github` command is now an optional plugin that can be built separately with `shards build milka-github -Dgithub_plugin`
+- **Leaner default build**: The default `milka` binary no longer includes the GitHub scanning functionality, keeping it lightweight
+- **Easy plugin installation**: Users who need GitHub org/user scanning can build the extended version with a single command
+
+## 🚀 Version 2025.11.7 Highlights
+
+- **New `github` command** (plugin): Scan and clone all repositories from a GitHub organization or user with `milka github <org-name>`
 - **Optional cloning**: Use `milka github <org-name> --clone` to both add repos to config and clone them
 - **GitHub API integration**: Automatic pagination for organizations with many repositories
 - **Token authentication**: Support for `GITHUB_TOKEN` and `GH_TOKEN` environment variables for private repos and higher rate limits
@@ -63,9 +69,9 @@ source = 'git+subtree'  # For subtree operations (new feature!)
 - **Fetch updates** from multiple repositories simultaneously
 - **Pull latest changes** from all configured repositories
 - **Push changes** to multiple repositories at once
-- **Subtree support** - Use git subtree operations with `--subtree` flag (new!)
+- **Subtree support** - Use git subtree operations with `--subtree` flag
 - **Scan** current directory for existing git repositories and add them to configuration
-- **GitHub organization scanning** - Fetch and clone all repositories from a GitHub organization or user
+- **GitHub organization scanning** (plugin) - Fetch and clone all repositories from a GitHub organization or user (requires `-Dgithub_plugin` build flag)
 - **Colored output** for better readability
 - **Spinner indicators** for ongoing operations
 - **Authentication support** for private repositories using personal access tokens
@@ -78,9 +84,13 @@ source = 'git+subtree'  # For subtree operations (new feature!)
 2. Clone this repository
 3. Build the project:
    ```bash
+   # Standard build (without github command)
    shards build
+
+   # Build with GitHub plugin (includes the github command)
+   shards build milka-github -Dgithub_plugin
    ```
-4. The executable will be available as `bin/milka`
+4. The executable will be available as `bin/milka` (or `bin/milka-github` for the plugin version)
 
 ### Pre-built Binaries
 
@@ -211,16 +221,18 @@ milka scan                     # Scan and add git repos to config (with source =
 milka scan --subtree           # Scan and add git repos to config (with source = "git+subtree")
 ```
 
-### `github`
+### `github` (Plugin)
 Scan GitHub organization or user repositories and add them to the configuration file. Optionally clone them as well.
 
+**Note**: This command is only available in the `milka-github` binary built with `-Dgithub_plugin` flag.
+
 ```bash
-milka github myorg             # Scan GitHub org 'myorg' and add all repos to config
-milka github myorg --clone     # Scan and also clone all repositories
-milka github myuser --subtree  # Scan user 'myuser' and add repos with subtree source
+milka-github github myorg             # Scan GitHub org 'myorg' and add all repos to config
+milka-github github myorg --clone     # Scan and also clone all repositories
+milka-github github myuser --subtree  # Scan user 'myuser' and add repos with subtree source
 ```
 
-**Note**: For private repositories or to avoid rate limits, set the `GITHUB_TOKEN` or `GH_TOKEN` environment variable with your GitHub personal access token.
+**Authentication**: For private repositories or to avoid rate limits, set the `GITHUB_TOKEN` or `GH_TOKEN` environment variable with your GitHub personal access token.
 
 ### `help`
 Show usage information.
@@ -278,11 +290,12 @@ milka scan                     # Add repos plane, not git init
 milka scan --subtree           # Add repos with subtree functionality
 ```
 
-Scan and clone all repositories from a GitHub organization:
+Scan and clone all repositories from a GitHub organization (requires plugin build):
 ```bash
-milka github myorg             # Add all org repos to config
-milka github myorg --clone     # Add to config and clone all repos
-GITHUB_TOKEN=your_token milka github private-org --clone  # With authentication
+# Build the plugin version first: shards build milka-github -Dgithub_plugin
+milka-github github myorg             # Add all org repos to config
+milka-github github myorg --clone     # Add to config and clone all repos
+GITHUB_TOKEN=your_token milka-github github private-org --clone  # With authentication
 ```
 
 ## Author

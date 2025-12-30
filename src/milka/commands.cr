@@ -31,8 +31,10 @@ def get_command_from_string(command_string : String)
     :create
   when "remote"
     :remote
+  {% if flag?(:github_plugin) %}
   when "github"
     :github
+  {% end %}
   when "help"
     :help
   else
@@ -110,9 +112,14 @@ def main
     (non_option_args[2].starts_with?("http://") || non_option_args[2].starts_with?("https://"))
   )
 
-  # Load configuration for commands that need it (not for scan, create, remote, or github commands)
+  # Load configuration for commands that need it (not for scan, create, remote commands)
   # Also skip loading config if this is a URL clone operation
-  if command_string != "scan" && command_string != "init" && command_string != "create" && command_string != "remote" && command_string != "github" && !is_url_clone
+  {% if flag?(:github_plugin) %}
+  skip_config_load = command_string == "scan" || command_string == "init" || command_string == "create" || command_string == "remote" || command_string == "github" || is_url_clone
+  {% else %}
+  skip_config_load = command_string == "scan" || command_string == "init" || command_string == "create" || command_string == "remote" || is_url_clone
+  {% end %}
+  if !skip_config_load
     begin
       config = ConfigManager.load_mise_config(config_path)
       Utils.print_info("Loaded #{config.repositories.size} repositories")
@@ -146,7 +153,12 @@ def main
       exit(1)
     end
 
-    if command_string == "scan" || command_string == "create" || command_string == "remote" || command_string == "clone" || command_string == "github"
+    {% if flag?(:github_plugin) %}
+    needs_additional_args = command_string == "scan" || command_string == "create" || command_string == "remote" || command_string == "clone" || command_string == "github"
+    {% else %}
+    needs_additional_args = command_string == "scan" || command_string == "create" || command_string == "remote" || command_string == "clone"
+    {% end %}
+    if needs_additional_args
       command.execute(repositories, repo_name, additional_args)
     else
       command.execute(repositories, repo_name)

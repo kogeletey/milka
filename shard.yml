@@ -1,11 +1,13 @@
 name: milka
-version: 2025.11.7
+version: 2025.11.8
 
 authors:
   - Konrad Geletey <kg@re128.org>
 
 targets:
   milka:
+    main: src/main.cr
+  milka-github:
     main: src/main.cr
 
 dependencies:
