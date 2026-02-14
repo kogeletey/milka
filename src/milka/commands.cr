@@ -31,6 +31,8 @@ def get_command_from_string(command_string : String)
     :create
   when "remote"
     :remote
+  when "issues"
+    :issues
   when "help"
     :help
   else
@@ -108,9 +110,10 @@ def main
     (non_option_args[2].starts_with?("http://") || non_option_args[2].starts_with?("https://"))
   )
 
-  # Load configuration for commands that need it (not for scan, create, or remote commands)
+  # Load configuration for commands that need it (not for scan, create, remote, or issues commands)
   # Also skip loading config if this is a URL clone operation
-  if command_string != "scan" && command_string != "init" && command_string != "create" && command_string != "remote" && !is_url_clone
+  # Issues command can work without config if a repo URL is provided
+  if command_string != "scan" && command_string != "init" && command_string != "create" && command_string != "remote" && command_string != "issues" && !is_url_clone
     begin
       config = ConfigManager.load_mise_config(config_path)
       Utils.print_info("Loaded #{config.repositories.size} repositories")
@@ -132,6 +135,20 @@ def main
       Utils.print_error("No repositories available to process. Check the warning above and your config file.")
       exit(1)
     end
+  elsif command_string == "issues"
+    # Issues command: try to load config but don't fail if not found
+    begin
+      config = ConfigManager.load_mise_config(config_path)
+      repositories = config.repositories
+      if branch_override
+        repositories = repositories.map do |repo|
+          RepositoryInfo.new(repo.name, repo.url, branch_override, repo.latest_commit, repo.source)
+        end
+      end
+    rescue e : GitError
+      # Config is optional for issues command, can work with URL directly
+      repositories = [] of RepositoryInfo
+    end
   end
 
   begin
@@ -144,7 +161,7 @@ def main
       exit(1)
     end
 
-    if command_string == "scan" || command_string == "create" || command_string == "remote" || command_string == "clone"
+    if command_string == "scan" || command_string == "create" || command_string == "remote" || command_string == "clone" || command_string == "issues"
       command.execute(repositories, repo_name, additional_args)
     else
       command.execute(repositories, repo_name)
