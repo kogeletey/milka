@@ -16,6 +16,14 @@ def init_config(config_path : String)
 end
 
 def get_command_from_string(command_string : String)
+  # Check plugin commands first
+  {% if flag?(:github_plugin) %}
+  if command_string == "github"
+    return :github
+  end
+  {% end %}
+
+  # Then check base commands
   case command_string
   when "clone"
     :clone
@@ -33,9 +41,7 @@ def get_command_from_string(command_string : String)
     :remote
   when "issues"
     :issues
-  {% if flag?(:github_plugin) %}when "github"
-    :github
-  {% end %}when "help"
+  when "help"
     :help
   else
     nil
