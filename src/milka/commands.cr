@@ -121,10 +121,9 @@ def main
   # Load configuration for commands that need it (not for scan, create, remote, issues, or github commands)
   # Also skip loading config if this is a URL clone operation
   # Issues and github commands can work without config if a URL/org-name is provided
-  {% if flag?(:github_plugin) %}
-  skip_config_load = command_string == "scan" || command_string == "init" || command_string == "create" || command_string == "remote" || command_string == "issues" || command_string == "github" || is_url_clone
-  {% else %}
   skip_config_load = command_string == "scan" || command_string == "init" || command_string == "create" || command_string == "remote" || command_string == "issues" || is_url_clone
+  {% if flag?(:github_plugin) %}
+  skip_config_load = skip_config_load || command_string == "github"
   {% end %}
   if !skip_config_load
     begin
@@ -174,10 +173,9 @@ def main
       exit(1)
     end
 
-    {% if flag?(:github_plugin) %}
-    needs_additional_args = command_string == "scan" || command_string == "create" || command_string == "remote" || command_string == "clone" || command_string == "issues" || command_string == "github"
-    {% else %}
     needs_additional_args = command_string == "scan" || command_string == "create" || command_string == "remote" || command_string == "clone" || command_string == "issues"
+    {% if flag?(:github_plugin) %}
+    needs_additional_args = needs_additional_args || command_string == "github"
     {% end %}
     if needs_additional_args
       command.execute(repositories, repo_name, additional_args)
