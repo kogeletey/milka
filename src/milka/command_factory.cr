@@ -5,6 +5,7 @@ require "./commands/push_command"
 require "./commands/scan_command"
 require "./commands/create_command"
 require "./commands/remote_command"
+require "./commands/issues_command"
 {% if flag?(:github_plugin) %}
 require "./commands/github_command"
 {% end %}
@@ -26,6 +27,8 @@ class CommandFactory
       CreateCommand.new(config_path, branch_override, use_subtree)
     when "remote"
       RemoteCommand.new(config_path, branch_override)
+    when "issues"
+      IssuesCommand.new(config_path, branch_override)
     {% if flag?(:github_plugin) %}
     when "github"
       GithubCommand.new(config_path, branch_override, use_subtree)

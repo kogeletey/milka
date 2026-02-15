@@ -43,6 +43,7 @@ module Utils
       scan                 Scan for git repositories in the current directory and add them to reps.toml
       create <repo-name> [remote-url]   Create a new git repository and optionally set its remote
       remote <repo-name> <remote-url>   Add a remote to a local git repository
+      issues [repo-name]   Download issues from repositories to .meta/issues/ directory
       github <org-name> [--clone]       Scan GitHub org/user repos and add them to config (optionally clone)
       help                 Show this help message
 
@@ -50,6 +51,15 @@ module Utils
       --config <path>      Path to reps.toml configuration file (default: ./.meta/reps.toml)
       --branch <branch>    Specify branch (default: from config or main)
       --subtree            Use git subtree operations (for scan, create, github commands)
+
+    Issues Options:
+      --format <format>    Output format: org (default) or md
+      --output <path>      Output directory (default: .meta/issues)
+      --state <state>      Filter by state: open, closed, or all (default: all)
+
+    Environment Variables:
+      GITHUB_TOKEN         Token for GitHub API (required for private repos)
+      FORGEJO_TOKEN        Token for Forgejo/Gitea API (required for private repos)
 
     Examples:
       milka clone                    Clone all repositories from reps.toml
@@ -65,6 +75,12 @@ module Utils
       milka github myorg             Scan GitHub org 'myorg' and add repos to config
       milka github myorg --clone     Scan GitHub org 'myorg', add to config, and clone all repos
       milka github myuser --subtree  Scan GitHub user 'myuser' and add repos with subtree source
+      milka issues                   Download issues for all repos in config
+      milka issues my-repo           Download issues for specific repo from config
+      milka issues owner/repo        Download issues from GitHub owner/repo
+      milka issues https://github.com/owner/repo    Download issues from URL
+      milka issues my-repo --format md    Download issues as Markdown files
+      milka issues my-repo --state open   Download only open issues
       milka create my-repo           Create a new git repository
       milka create my-repo https://example.com/user/repo.git    Create a new git repository with remote
       milka create my-subtree --subtree  Create a subtree git repository in existing directory
@@ -86,12 +102,22 @@ module Utils
       scan                 Scan for git repositories in the current directory and add them to reps.toml
       create <repo-name> [remote-url]   Create a new git repository and optionally set its remote
       remote <repo-name> <remote-url>   Add a remote to a local git repository
+      issues [repo-name]   Download issues from repositories to .meta/issues/ directory
       help                 Show this help message
 
     Options:
       --config <path>      Path to reps.toml configuration file (default: ./.meta/reps.toml)
       --branch <branch>    Specify branch (default: from config or main)
       --subtree            Use git subtree operations (for scan, create commands)
+
+    Issues Options:
+      --format <format>    Output format: org (default) or md
+      --output <path>      Output directory (default: .meta/issues)
+      --state <state>      Filter by state: open, closed, or all (default: all)
+
+    Environment Variables:
+      GITHUB_TOKEN         Token for GitHub API (required for private repos)
+      FORGEJO_TOKEN        Token for Forgejo/Gitea API (required for private repos)
 
     Examples:
       milka clone                    Clone all repositories from reps.toml
@@ -108,6 +134,12 @@ module Utils
       milka create my-repo https://example.com/user/repo.git    Create a new git repository with remote
       milka create my-subtree --subtree  Create a subtree git repository in existing directory
       milka remote my-repo https://example.com/user/repo.git    Add remote to a local git repository
+      milka issues                   Download issues for all repos in config
+      milka issues my-repo           Download issues for specific repo from config
+      milka issues owner/repo        Download issues from GitHub owner/repo
+      milka issues https://github.com/owner/repo    Download issues from URL
+      milka issues my-repo --format md    Download issues as Markdown files
+      milka issues my-repo --state open   Download only open issues
       milka --config /path/to/reps.toml clone
       milka --config /path/to/reps.toml --branch feature-branch clone my-repo
 

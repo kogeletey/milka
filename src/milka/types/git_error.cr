@@ -39,4 +39,16 @@ class GitError < Exception
   def self.subtree_push_failed(message)
     new("Subtree push failed: #{message}")
   end
+
+  def self.issues_fetch_failed(message)
+    new("Issues fetch failed: #{message}")
+  end
+
+  def self.issues_api_error(message)
+    new("Issues API error: #{message}")
+  end
+
+  def self.issues_invalid_format(message)
+    new("Invalid issues format: #{message}")
+  end
 end

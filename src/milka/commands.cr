@@ -31,6 +31,8 @@ def get_command_from_string(command_string : String)
     :create
   when "remote"
     :remote
+  when "issues"
+    :issues
   {% if flag?(:github_plugin) %}
   when "github"
     :github
@@ -112,12 +114,13 @@ def main
     (non_option_args[2].starts_with?("http://") || non_option_args[2].starts_with?("https://"))
   )
 
-  # Load configuration for commands that need it (not for scan, create, remote commands)
+  # Load configuration for commands that need it (not for scan, create, remote, issues, or github commands)
   # Also skip loading config if this is a URL clone operation
+  # Issues and github commands can work without config if a URL/org-name is provided
   {% if flag?(:github_plugin) %}
-  skip_config_load = command_string == "scan" || command_string == "init" || command_string == "create" || command_string == "remote" || command_string == "github" || is_url_clone
+  skip_config_load = command_string == "scan" || command_string == "init" || command_string == "create" || command_string == "remote" || command_string == "issues" || command_string == "github" || is_url_clone
   {% else %}
-  skip_config_load = command_string == "scan" || command_string == "init" || command_string == "create" || command_string == "remote" || is_url_clone
+  skip_config_load = command_string == "scan" || command_string == "init" || command_string == "create" || command_string == "remote" || command_string == "issues" || is_url_clone
   {% end %}
   if !skip_config_load
     begin
@@ -141,6 +144,20 @@ def main
       Utils.print_error("No repositories available to process. Check the warning above and your config file.")
       exit(1)
     end
+  elsif command_string == "issues"
+    # Issues command: try to load config but don't fail if not found
+    begin
+      config = ConfigManager.load_mise_config(config_path)
+      repositories = config.repositories
+      if branch_override
+        repositories = repositories.map do |repo|
+          RepositoryInfo.new(repo.name, repo.url, branch_override, repo.latest_commit, repo.source)
+        end
+      end
+    rescue e : GitError
+      # Config is optional for issues command, can work with URL directly
+      repositories = [] of RepositoryInfo
+    end
   end
 
   begin
@@ -154,9 +171,9 @@ def main
     end
 
     {% if flag?(:github_plugin) %}
-    needs_additional_args = command_string == "scan" || command_string == "create" || command_string == "remote" || command_string == "clone" || command_string == "github"
+    needs_additional_args = command_string == "scan" || command_string == "create" || command_string == "remote" || command_string == "clone" || command_string == "issues" || command_string == "github"
     {% else %}
-    needs_additional_args = command_string == "scan" || command_string == "create" || command_string == "remote" || command_string == "clone"
+    needs_additional_args = command_string == "scan" || command_string == "create" || command_string == "remote" || command_string == "clone" || command_string == "issues"
     {% end %}
     if needs_additional_args
       command.execute(repositories, repo_name, additional_args)
