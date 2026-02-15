@@ -32,11 +32,9 @@ def get_command_from_string(command_string : String)
   when "remote"
     :remote
   when "issues"
-    :issues
-  {% if flag?(:github_plugin) %}
+    :issues{% if flag?(:github_plugin) %}
   when "github"
-    :github
-  {% end %}
+    :github{% end %}
   when "help"
     :help
   else
