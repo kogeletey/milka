@@ -28,10 +28,10 @@ class CommandFactory
     when "remote"
       RemoteCommand.new(config_path, branch_override)
     when "issues"
-      IssuesCommand.new(config_path, branch_override){% if flag?(:github_plugin) %}
-    when "github"
-      GithubCommand.new(config_path, branch_override, use_subtree){% end %}
-    else
+      IssuesCommand.new(config_path, branch_override)
+    {% if flag?(:github_plugin) %}when "github"
+      GithubCommand.new(config_path, branch_override, use_subtree)
+    {% end %}else
       nil
     end
   end
