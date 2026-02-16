@@ -16,6 +16,14 @@ def init_config(config_path : String)
 end
 
 def get_command_from_string(command_string : String)
+  # Check plugin commands first
+  {% if flag?(:github_plugin) %}
+  if command_string == "github"
+    return :github
+  end
+  {% end %}
+
+  # Then check base commands
   case command_string
   when "clone"
     :clone
@@ -110,10 +118,14 @@ def main
     (non_option_args[2].starts_with?("http://") || non_option_args[2].starts_with?("https://"))
   )
 
-  # Load configuration for commands that need it (not for scan, create, remote, or issues commands)
+  # Load configuration for commands that need it (not for scan, create, remote, issues, or github commands)
   # Also skip loading config if this is a URL clone operation
-  # Issues command can work without config if a repo URL is provided
-  if command_string != "scan" && command_string != "init" && command_string != "create" && command_string != "remote" && command_string != "issues" && !is_url_clone
+  # Issues and github commands can work without config if a URL/org-name is provided
+  skip_config_load = command_string == "scan" || command_string == "init" || command_string == "create" || command_string == "remote" || command_string == "issues" || is_url_clone
+  {% if flag?(:github_plugin) %}
+  skip_config_load = skip_config_load || command_string == "github"
+  {% end %}
+  if !skip_config_load
     begin
       config = ConfigManager.load_mise_config(config_path)
       Utils.print_info("Loaded #{config.repositories.size} repositories")
@@ -161,7 +173,11 @@ def main
       exit(1)
     end
 
-    if command_string == "scan" || command_string == "create" || command_string == "remote" || command_string == "clone" || command_string == "issues"
+    needs_additional_args = command_string == "scan" || command_string == "create" || command_string == "remote" || command_string == "clone" || command_string == "issues"
+    {% if flag?(:github_plugin) %}
+    needs_additional_args = needs_additional_args || command_string == "github"
+    {% end %}
+    if needs_additional_args
       command.execute(repositories, repo_name, additional_args)
     else
       command.execute(repositories, repo_name)

@@ -21,14 +21,25 @@ jobs:
       - name: Install shards
         run: shards install
 
-      - name: Run tests
+      - name: Run tests (default build)
         run: crystal spec
 
-      - name: Build executable
+      - name: Run tests (with github plugin)
+        run: crystal spec -Dgithub_plugin
+
+      - name: Build executable (default)
         run: |
           mkdir -p bin
           crystal build src/main.cr -o bin/milka --release --no-debug
 
-      - name: Verify executable
+      - name: Verify executable (default)
         run: |
           ./bin/milka --help
+
+      - name: Build executable (with github plugin)
+        run: |
+          crystal build src/main.cr -o bin/milka-github --release --no-debug -Dgithub_plugin
+
+      - name: Verify executable (with github plugin)
+        run: |
+          ./bin/milka-github --help

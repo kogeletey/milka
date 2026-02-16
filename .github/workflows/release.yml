@@ -44,7 +44,7 @@ jobs:
       - name: Install shards
         run: shards install
 
-      - name: Build executable
+      - name: Build executable (default)
         run: |
           mkdir -p bin
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
@@ -54,25 +54,40 @@ jobs:
           fi
         shell: bash
 
+      - name: Build executable (with github plugin)
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            crystal build src/main.cr -o bin/milka-github.exe --release --no-debug -Dgithub_plugin
+          else
+            crystal build src/main.cr -o bin/milka-github --release --no-debug -Dgithub_plugin
+          fi
+        shell: bash
+
       - name: Package release asset
         run: |
-          # Create a zip archive containing the executable
+          # Create zip archives containing the executables
           if [ "${{ matrix.platform }}" = "windows" ]; then
             7z a -tzip "milka-${{ matrix.target }}.zip" "bin/milka.exe"
+            7z a -tzip "milka-github-${{ matrix.target }}.zip" "bin/milka-github.exe"
           else
             cp bin/milka milka
             zip -r "milka-${{ matrix.target }}.zip" milka
-            rm milka  # Clean up the copied file
+            rm milka
+            cp bin/milka-github milka-github
+            zip -r "milka-github-${{ matrix.target }}.zip" milka-github
+            rm milka-github
           fi
 
-          # Generate checksum for the archive
-          if command -v sha256sum > /dev/null; then
-            sha256sum "milka-${{ matrix.target }}.zip" > "milka-${{ matrix.target }}.zip.sha256"
-          elif command -v shasum > /dev/null; then
-            shasum -a 256 "milka-${{ matrix.target }}.zip" > "milka-${{ matrix.target }}.zip.sha256"
-          elif command -v certutil > /dev/null; then
-            certutil -hashfile "milka-${{ matrix.target }}.zip" SHA256 > "milka-${{ matrix.target }}.zip.sha256"
-          fi
+          # Generate checksums for the archives
+          for file in milka-${{ matrix.target }}.zip milka-github-${{ matrix.target }}.zip; do
+            if command -v sha256sum > /dev/null; then
+              sha256sum "$file" > "$file.sha256"
+            elif command -v shasum > /dev/null; then
+              shasum -a 256 "$file" > "$file.sha256"
+            elif command -v certutil > /dev/null; then
+              certutil -hashfile "$file" SHA256 > "$file.sha256"
+            fi
+          done
         shell: bash
 
       - name: Release
@@ -81,5 +96,7 @@ jobs:
           files: |
             milka-${{ matrix.target }}.zip
             milka-${{ matrix.target }}.zip.sha256
+            milka-github-${{ matrix.target }}.zip
+            milka-github-${{ matrix.target }}.zip.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

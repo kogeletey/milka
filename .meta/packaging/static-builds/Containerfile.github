@@ -1,0 +1,17 @@
+FROM crystallang/crystal:1-alpine
+
+WORKDIR /app
+
+COPY . .
+
+RUN shards install --without-development
+
+RUN mkdir -p bin
+
+RUN crystal build src/main.cr -o bin/milka-github --static --release --no-debug -Dgithub_plugin
+
+FROM scratch
+
+COPY --from=0 /app/bin/milka-github /milka-github
+
+CMD ["/milka-github"]

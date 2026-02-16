@@ -6,9 +6,26 @@ require "./commands/scan_command"
 require "./commands/create_command"
 require "./commands/remote_command"
 require "./commands/issues_command"
+{% if flag?(:github_plugin) %}
+require "./commands/github_command"
+{% end %}
 
 class CommandFactory
   def self.create_command(command_string : String, config_path : String, branch_override : String? = nil, use_subtree : Bool = false)
+    # First try base commands
+    result = create_base_command(command_string, config_path, branch_override, use_subtree)
+    return result if result
+
+    # Then try plugin commands
+    {% if flag?(:github_plugin) %}
+    result = create_github_command(command_string, config_path, branch_override, use_subtree)
+    return result if result
+    {% end %}
+
+    nil
+  end
+
+  private def self.create_base_command(command_string : String, config_path : String, branch_override : String?, use_subtree : Bool)
     case command_string
     when "clone"
       CloneCommand.new(config_path, branch_override)
@@ -30,4 +47,15 @@ class CommandFactory
       nil
     end
   end
+
+  {% if flag?(:github_plugin) %}
+  private def self.create_github_command(command_string : String, config_path : String, branch_override : String?, use_subtree : Bool)
+    case command_string
+    when "github"
+      GithubCommand.new(config_path, branch_override, use_subtree)
+    else
+      nil
+    end
+  end
+  {% end %}
 end
