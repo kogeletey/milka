@@ -125,6 +125,25 @@ describe "ConfigManager" do
       config.repositories[0].name.should eq("root-repo")
       config.repositories[0].source.should eq("git+subtree")
     end
+
+    it "loads RCL configuration from an extensionless path" do
+      rcl_content = <<-'RCL'
+        do [
+          do
+            dir = "extensionless-repo"
+            remote = "https://github.com/example/extensionless-repo"
+          end
+        ]
+        RCL
+
+      config_path = File.join(CONFIG_MANAGER_SPEC_TEMP_DIR, "extensionless_config")
+      File.write(config_path, rcl_content)
+
+      config = load_mise_config(config_path)
+      config.repositories.size.should eq(1)
+      config.repositories[0].name.should eq("extensionless-repo")
+      config.repositories[0].url.should eq("https://github.com/example/extensionless-repo")
+    end
   end
 
   describe "init_config" do

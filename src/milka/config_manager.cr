@@ -201,7 +201,24 @@ class ConfigManager
   end
 
   private def self.config_format(path : String) : Symbol
-    File.extname(path).downcase == ".rcl" ? :rcl : :toml
+    extension = File.extname(path).downcase
+    return :rcl if extension == ".rcl"
+    return :toml if extension == ".toml"
+    return :toml unless File.exists?(path)
+
+    content = File.read(path)
+    looks_like_rcl?(content) ? :rcl : :toml
+  end
+
+  private def self.looks_like_rcl?(content : String) : Bool
+    content.each_line do |line|
+      stripped = line.strip
+      next if stripped.empty? || stripped.starts_with?("#")
+
+      return stripped.starts_with?("do [")
+    end
+
+    false
   end
 
   private def self.load_toml_repositories(path : String) : Array(RepositoryInfo)

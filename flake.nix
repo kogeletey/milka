@@ -75,7 +75,7 @@
               milkaPackage
             ];
             text = ''
-              config="$(mktemp)"
+              config="$(mktemp --suffix=.rcl)"
               trap 'rm -f "$config"' EXIT
               cp "${repositoriesPackage}/share/milka/reps.rcl" "$config"
               exec milka --config "$config" clone "$@"
@@ -155,7 +155,7 @@
                 echo "Skipping Milka repository clone because MILKA_DEVENV_SKIP_CLONE=1"
               else
                 echo "Cloning repositories declared in milka.repositories. Set MILKA_DEVENV_SKIP_CLONE=1 to skip."
-                config="$(mktemp)"
+                config="$(mktemp --suffix=.rcl)"
                 cp "${repositoriesPackage}/share/milka/reps.rcl" "$config"
                 ${cfg.package}/bin/milka --config "$config" clone || \
                   echo "Repository clone failed; continuing devenv shell startup."

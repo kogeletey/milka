@@ -27,7 +27,7 @@ class CloneCommand < BaseCommand
         # This is a repo name from the config file
         repo = Utils.find_repository_in(repositories.not_nil!, named: repo_name)
         unless repo
-          Utils.print_error("❌ Error: Repository '#{repo_name}' not found in configuration")
+          Utils.print_error("✗ Error: Repository '#{repo_name}' not found in configuration")
           exit(1)
         end
 
@@ -55,7 +55,7 @@ class CloneCommand < BaseCommand
     # For subtree operations, ensure we're in a git repository
     if source_type == "git+subtree"
       unless is_current_directory_git_repo?
-        Utils.print_error("❌ Error: Subtree operations require the current directory to be a git repository")
+        Utils.print_error("✗ Error: Subtree operations require the current directory to be a git repository")
         exit(1)
       end
     end
@@ -76,9 +76,9 @@ class CloneCommand < BaseCommand
     # Add the newly cloned repository to the configuration file
     begin
       ConfigManager.add_git_repo_to_config(@config_path, repo_name, url, branch, source_type)
-      Utils.print_info("✅ Added '#{repo_name}' to #{@config_path}")
+      Utils.print_info("✓ Added '#{repo_name}' to #{@config_path}")
     rescue e
-      Utils.print_error("⚠️  Warning: Failed to add '#{repo_name}' to config: #{e.message}")
+      Utils.print_error("! Warning: Failed to add '#{repo_name}' to config: #{e.message}")
     end
   end
 

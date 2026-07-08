@@ -1,6 +1,6 @@
 require "spec"
 require "file_utils"
-require "../../src/milka/utils"
+require "../../src/milka/git_operations"
 
 # Create temporary directory for test isolation
 SPINNER_STATE_SPEC_TEMP_DIR = File.join(Dir.tempdir, "milka_spinner_state_spec_#{Time.local.to_unix}")
@@ -14,6 +14,11 @@ describe "SpinnerState" do
     if Dir.exists?(SPINNER_STATE_SPEC_TEMP_DIR)
       FileUtils.rm_rf(SPINNER_STATE_SPEC_TEMP_DIR)
     end
+  end
+
+  it "uses non-emoji status symbols" do
+    SpinnerState::SUCCESS_SYMBOL.should eq("✓")
+    SpinnerState::FAILURE_SYMBOL.should eq("✗")
   end
 
   it "manages spinner state correctly" do

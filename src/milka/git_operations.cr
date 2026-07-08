@@ -7,6 +7,9 @@ require "./utils"
 SPINNER_CHARS = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 
 class SpinnerState
+  SUCCESS_SYMBOL = "✓"
+  FAILURE_SYMBOL = "✗"
+
   property is_active : Bool
   property current_id : String
   property current_label : String
@@ -29,8 +32,8 @@ class SpinnerState
     return unless @current_id == id
     @is_active = false
     color = success ? Utils::ANSI_COLORS[:success] : Utils::ANSI_COLORS[:error]
-    symbol = success ? "✅" : "❌"
-    print "\r#{color}#{symbol} #{@current_label}#{Utils::ANSI_COLORS[:reset]}"
+    symbol = success ? SUCCESS_SYMBOL : FAILURE_SYMBOL
+    puts "\r#{color}#{symbol} #{@current_label}#{Utils::ANSI_COLORS[:reset]}"
     @current_id = ""
     @current_label = ""
   end
@@ -48,6 +51,54 @@ end
 
 def stop_spinner(id : String, success : Bool)
   SPINNER_STATE.stop(id, success)
+end
+
+# Helper method to run commands while teeing process output to the terminal.
+def run_streaming_command(cmd : String, args : Array(String), chdir : String? = nil)
+  stdout_builder = String::Builder.new
+  stderr_builder = String::Builder.new
+
+  process = Process.new(
+    cmd,
+    args,
+    output: Process::Redirect::Pipe,
+    error: Process::Redirect::Pipe,
+    chdir: chdir
+  )
+
+  stdout_done = Channel(Nil).new
+  stderr_done = Channel(Nil).new
+
+  stream_process_io(process.output, STDOUT, stdout_builder, stdout_done)
+  stream_process_io(process.error, STDERR, stderr_builder, stderr_done)
+
+  status = process.wait
+  stdout_done.receive
+  stderr_done.receive
+
+  {
+    success:   status.success?,
+    exit_code: status.exit_code,
+    stdout:    stdout_builder.to_s,
+    stderr:    stderr_builder.to_s,
+  }
+end
+
+def stream_process_io(source : IO, destination : IO, builder : String::Builder, done : Channel(Nil))
+  spawn do
+    buffer = Bytes.new(4096)
+    loop do
+      bytes_read = source.read(buffer)
+      break if bytes_read == 0
+
+      chunk = String.new(buffer[0, bytes_read])
+      builder << chunk
+      destination.print chunk
+      destination.flush
+    end
+  ensure
+    done.send(nil)
+  end
 end
 
 # Helper method to run git commands with consistent error handling and output capture
@@ -125,9 +176,9 @@ class GitManager
       return
     end
 
-    spinner_id = start_spinner("Cloning #{repo.name}")
     begin
-      result = run_git_command("git", ["clone", "--branch", repo.branch, repo.url, local_path], chdir: current_dir, spinner_id: spinner_id)
+      Utils.print_info("Cloning #{repo.name}")
+      result = run_streaming_command("git", ["clone", "--progress", "--branch", repo.branch, repo.url, local_path], chdir: current_dir)
 
       unless result[:success]
         Utils.print_error("Clone failed with status #{result[:exit_code]}. Check above output for details (e.g., network issues, invalid URL, or permissions).")
@@ -144,38 +195,34 @@ class GitManager
         return
       end
 
-      # Add cloned directory to .gitignore
-      gitignore_path = File.join(current_dir, ".gitignore")
-      repo_dir = "#{local_path}/"
-      gitignore_content = ""
-      should_add = true
-
-      if File.exists?(gitignore_path)
-        begin
-          gitignore_content = File.read(gitignore_path)
-          should_add = !gitignore_content.includes?(repo_dir)
-        rescue e
-          Utils.print_warning("Could not read .gitignore: #{e.message}")
-        end
-      end
-
-      if should_add
-        if gitignore_content.empty?
-          gitignore_content = repo_dir
-        else
-          gitignore_content += "\n#{repo_dir}"
-        end
-        begin
-          File.write(gitignore_path, gitignore_content)
-          Utils.print_info("Added '#{repo_dir}' to .gitignore")
-        rescue e
-          Utils.print_warning("Could not update .gitignore: #{e.message}")
-        end
-      end
+      Utils.print_success("✓ Cloned #{repo.name}")
+      add_cloned_directory_to_gitignore(current_dir, local_path)
     rescue e
-      stop_spinner(spinner_id, success: false)
       raise e
     end
+  end
+
+  private def add_cloned_directory_to_gitignore(current_dir : String, local_path : String)
+    gitignore_path = File.join(current_dir, ".gitignore")
+    repo_dir = "#{local_path}/"
+
+    begin
+      gitignore_content = File.exists?(gitignore_path) ? File.read(gitignore_path) : ""
+      return if gitignore_content.lines.any? { |line| line.chomp == repo_dir }
+
+      updated_content = append_gitignore_entry(gitignore_content, repo_dir)
+      File.write(gitignore_path, updated_content)
+      Utils.print_info("Added '#{repo_dir}' to .gitignore")
+    rescue e
+      Utils.print_warning("Could not update .gitignore: #{e.message}")
+    end
+  end
+
+  private def append_gitignore_entry(content : String, entry : String) : String
+    return "#{entry}\n" if content.empty?
+
+    separator = content.ends_with?("\n") ? "" : "\n"
+    "#{content}#{separator}#{entry}\n"
   end
 
   private def clone_subtree_repository(repo : RepositoryInfo)
