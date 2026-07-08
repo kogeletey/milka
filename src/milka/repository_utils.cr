@@ -143,8 +143,21 @@ class RepositoryUtils
     # Create the directory if it doesn't exist
     Dir.mkdir_p(config_dir) unless File.directory?(config_dir)
 
-    # Define the template content for reps.toml
-    template_content = <<-'TOML'
+    template_content = if File.extname(config_path).downcase == ".rcl"
+                         <<-'RCL'
+    # Milka - Repository Configuration
+
+    # Add your repositories to this file using the format below
+    do [
+      # do
+      #   dir = "project"
+      #   remote = "https://example.com/username/my-project.git"
+      #   branch = "develop"
+      # end
+    ]
+    RCL
+                       else
+                         <<-'TOML'
     # Milka - Repository Configuration
 
     # Add your repositories to this file using the format below
@@ -153,6 +166,7 @@ class RepositoryUtils
     # remote = 'https://example.com/username/my-project.git'
     # branch = 'develop'
     TOML
+                       end
 
     # Write the template to the config file
     File.write(config_path, template_content.strip)

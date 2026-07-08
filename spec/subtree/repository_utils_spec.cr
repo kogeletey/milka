@@ -68,6 +68,25 @@ describe "RepositoryUtils" do
     content.includes?("source = 'git'").should be_false
   end
 
+  it "should add git repos to RCL config without dropping existing repos" do
+    config_path = File.join(REPO_UTILS_SPEC_TEMP_DIR, "add_repo_config.rcl")
+
+    ConfigManager.add_git_repo_to_config(config_path, "first_repo", "https://example.com/first.git", "main")
+    ConfigManager.add_git_repo_to_config(config_path, "second_repo", "https://example.com/second.git", "develop", "git+subtree")
+
+    content = File.read(config_path)
+    content.includes?("do [").should be_true
+    content.includes?("repo do [").should be_false
+    content.includes?("dir = \"first_repo\"").should be_true
+    content.includes?("dir = \"second_repo\"").should be_true
+    content.includes?("source = \"git+subtree\"").should be_true
+
+    config = ConfigManager.load_mise_config(config_path)
+    config.repositories.size.should eq(2)
+    config.repositories[0].name.should eq("first_repo")
+    config.repositories[1].name.should eq("second_repo")
+  end
+
   it "should handle scan_and_add_git_repos with subtree flag properly" do
     temp_dir = File.join(REPO_UTILS_SPEC_TEMP_DIR, "scan_add_test")
     Dir.mkdir_p(temp_dir)

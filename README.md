@@ -7,7 +7,7 @@ A command-line tool for managing multiple git repositories simultaneously. Milka
 Quick start with Milka:
 
 1. **Install**: Download from [Releases](https://github.com/kogeletey/milka/releases) or build from source
-2. **Configure**: Create `.meta/reps.toml` with your repositories
+2. **Configure**: Create `.meta/reps.toml` or `.meta/reps.rcl` with your repositories
 3. **Use**: Run commands like `milka clone`, `milka pull`, `milka push` to manage all repos at once
 
 Example config:
@@ -122,6 +122,103 @@ docker rm -v milka-container
 
 Container builds provide a reproducible build environment and make it easy to run Milka in containerized environments.
 
+## Installing with Nix flakes
+
+If Nix is not installed yet, install it first using the official installer:
+
+```bash
+curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install | sh -s -- --daemon
+```
+
+For a single-user installation without the daemon:
+
+```bash
+curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install | sh -s -- --no-daemon
+```
+
+After Nix is available, install Milka from the flake:
+
+```bash
+nix profile install github:kogeletey/milka
+milka --help
+milka-github --help
+```
+
+From a checkout of this repository, the root flake builds Milka itself:
+
+```bash
+nix build
+nix flake check
+nix run . -- help
+nix run .#milka-github -- help
+```
+
+The default package installs both `milka` and `milka-github` into `bin/`.
+The root flake also provides a Milka development shell with Crystal, Shards,
+Git, and the Nix formatter:
+
+```bash
+nix develop --no-pure-eval
+```
+
+For other devenv flakes, Milka exposes a module with a simple declaration API:
+
+```nix
+{
+  imports = [
+    milka.lib.devenvModule
+  ];
+
+  milka.repositories = [
+    {
+      dir = "sireng";
+      remote = "ssh://git@source.lefine.pro:2222/lefinepro/sireng.git";
+      branch = "master";
+    }
+  ];
+}
+```
+
+Each repository object has `dir`, `remote`, optional `branch`, optional
+`commit`, and optional `source`. Set `milka.autoClone = false` to disable clone
+on shell entry. Set `MILKA_DEVENV_SKIP_CLONE=1` for a one-off skip.
+
+### Lefinepro devenv flake
+
+The Lefinepro repository workspace is a separate flake in `lefinepro/`. It uses
+Milka from the root flake, describes Lefinepro repositories as Nix objects via
+the Milka declaration API, and clones them automatically when the devenv shell
+starts.
+
+Install the devenv CLI if you want to use `devenv shell` directly:
+
+```bash
+nix profile install nixpkgs#devenv
+```
+
+Enter the Lefinepro development environment from the directory where the
+repositories should be cloned:
+
+```bash
+cd /root/opt/lefine
+nix develop ./milka/lefinepro --no-pure-eval
+devenv shell ./milka/lefinepro
+```
+
+To enter the shell without cloning:
+
+```bash
+MILKA_DEVENV_SKIP_CLONE=1 nix develop ./milka/lefinepro --no-pure-eval
+MILKA_DEVENV_SKIP_CLONE=1 devenv shell ./milka/lefinepro
+```
+
+You can also clone from the Lefinepro flake without entering the shell:
+
+```bash
+nix run ./milka/lefinepro
+nix run ./milka/lefinepro -- sireng
+```
+
 ## Quick Start
 
 1. Create a `.meta/reps.toml` configuration file in your project root with the repositories you want to manage:
@@ -150,7 +247,7 @@ Container builds provide a reproducible build environment and make it easy to ru
 
 ## Configuration
 
-Milka uses a TOML file (default: `.meta/reps.toml`) to define which repositories to manage.
+Milka uses a TOML file (default: `.meta/reps.toml`) to define which repositories to manage. RCL is also supported when the config path ends with `.rcl`.
 
 ### Configuration File Format
 
@@ -164,9 +261,22 @@ branch = 'main'                  # Branch to work with (default: 'main')
 # commit = ''                    # Specific commit to checkout (optional)
 ```
 
+Equivalent RCL:
+
+```rcl
+do [
+  do
+    dir = "directory-name"
+    remote = "https://github.com/username/repo.git"
+    branch = "main"
+    # commit = ""
+  end
+]
+```
+
 ### Default Configuration Location
 
-By default, Milka looks for configuration in `.meta/reps.toml` relative to the current working directory. You can specify a different location using the `--config` option.
+By default, Milka looks for configuration in `.meta/reps.toml` relative to the current working directory. Use `--config .meta/reps.rcl` to load RCL instead, or specify any other location with the `--config` option.
 
 ## Commands
 
@@ -243,7 +353,7 @@ milka help                     # Show help message
 
 ## Options
 
-- `--config <path>`: Specify custom path to configuration file (default: `./.meta/reps.toml`)
+- `--config <path>`: Specify custom path to configuration file (default: `./.meta/reps.toml`; `.rcl` paths are parsed as RCL)
 - `--branch <branch>`: Override branch for operations (default: branch from config or 'main')
 - `--subtree`: With scan: Add repositories with `source = "git+subtree"` (default: "git")
 
@@ -282,6 +392,7 @@ milka --branch develop pull
 Use a custom configuration file:
 ```bash
 milka --config /path/to/custom.toml pull
+milka --config .meta/reps.rcl pull
 ```
 
 Scan current directory and add git repositories to configuration:

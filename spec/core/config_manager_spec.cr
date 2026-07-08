@@ -77,6 +77,54 @@ describe "ConfigManager" do
       config.repositories[0].latest_commit.should eq("abc123")
       config.repositories[0].branch.should eq("feature")
     end
+
+    it "loads valid RCL configuration" do
+      rcl_content = <<-'RCL'
+        do [
+          do
+            dir = "my-repo"
+            remote = "https://github.com/example/my-repo"
+            branch = "main"
+          end,
+          do
+            dir = "frontend"
+            remote = "https://github.com/example/frontend"
+          end
+        ]
+        RCL
+
+      config_path = File.join(CONFIG_MANAGER_SPEC_TEMP_DIR, "test_config.rcl")
+      File.write(config_path, rcl_content)
+
+      config = load_mise_config(config_path)
+      config.repositories.size.should eq(2)
+      config.repositories[0].name.should eq("my-repo")
+      config.repositories[0].url.should eq("https://github.com/example/my-repo")
+      config.repositories[0].branch.should eq("main")
+      config.repositories[1].name.should eq("frontend")
+      config.repositories[1].url.should eq("https://github.com/example/frontend")
+      config.repositories[1].branch.should eq("main")
+    end
+
+    it "loads RCL root array configuration" do
+      rcl_content = <<-'RCL'
+        do [
+          do
+            dir = "root-repo"
+            remote = "https://github.com/example/root-repo"
+            source = "git+subtree"
+          end
+        ]
+        RCL
+
+      config_path = File.join(CONFIG_MANAGER_SPEC_TEMP_DIR, "root_array_config.rcl")
+      File.write(config_path, rcl_content)
+
+      config = load_mise_config(config_path)
+      config.repositories.size.should eq(1)
+      config.repositories[0].name.should eq("root-repo")
+      config.repositories[0].source.should eq("git+subtree")
+    end
   end
 
   describe "init_config" do
@@ -136,6 +184,19 @@ describe "ConfigManager" do
       content = File.read(config_path)
       content.should contain("# [[repo]]")
       content.should contain("# dir = 'project'")
+    end
+
+    it "creates an RCL template for .rcl config files" do
+      config_path = File.join(CONFIG_MANAGER_SPEC_TEMP_DIR, "init_test", "reps.rcl")
+
+      init_config(config_path)
+
+      File.exists?(config_path).should be_true
+
+      content = File.read(config_path)
+      content.should contain("do [")
+      content.should contain("dir = \"project\"")
+      content.should contain("remote = \"https://example.com/username/my-project.git\"")
     end
   end
 end

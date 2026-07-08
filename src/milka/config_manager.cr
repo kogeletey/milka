@@ -4,103 +4,287 @@ require "../milka/types/mise_config"
 require "../milka/types/git_error"
 require "./utils"
 
+class MilkaRclParser
+  alias Token = NamedTuple(kind: String, value: String)
+
+  @tokens : Array(Token)
+  @position : Int32
+
+  def initialize(content : String)
+    @tokens = tokenize(content)
+    @position = 0
+  end
+
+  def repositories : Array(Hash(String, String))
+    expect_word("do")
+    repos = parse_repo_array
+    expect_kind("eof")
+    repos
+  end
+
+  private def tokenize(content : String) : Array(Token)
+    tokens = [] of Token
+    index = 0
+
+    while index < content.size
+      char = content[index]
+
+      if char.whitespace?
+        index += 1
+      elsif char == '#'
+        index += 1
+        while index < content.size && content[index] != '\n'
+          index += 1
+        end
+      elsif char == '[' || char == ']' || char == '=' || char == ','
+        tokens << {kind: char.to_s, value: char.to_s}
+        index += 1
+      elsif char == '"'
+        value, index = read_string(content, index + 1)
+        tokens << {kind: "string", value: value}
+      elsif identifier_start?(char)
+        start = index
+        index += 1
+        while index < content.size && identifier_part?(content[index])
+          index += 1
+        end
+        tokens << {kind: "word", value: content[start...index]}
+      else
+        raise "Unexpected character '#{char}'"
+      end
+    end
+
+    tokens << {kind: "eof", value: ""}
+    tokens
+  end
+
+  private def read_string(content : String, index : Int32) : {String, Int32}
+    value = String::Builder.new
+
+    while index < content.size
+      char = content[index]
+
+      if char == '"'
+        return {value.to_s, index + 1}
+      elsif char == '\\'
+        index += 1
+        raise "Unterminated string" if index >= content.size
+
+        escaped = content[index]
+        case escaped
+        when '"', '\\'
+          value << escaped
+        when 'n'
+          value << '\n'
+        when 'r'
+          value << '\r'
+        when 't'
+          value << '\t'
+        else
+          value << escaped
+        end
+      else
+        value << char
+      end
+
+      index += 1
+    end
+
+    raise "Unterminated string"
+  end
+
+  private def identifier_start?(char : Char) : Bool
+    char.ascii_letter? || char == '_'
+  end
+
+  private def identifier_part?(char : Char) : Bool
+    char.ascii_letter? || char.ascii_number? || char == '_' || char == '-' || char == '.' || char == '+'
+  end
+
+  private def parse_repo_array : Array(Hash(String, String))
+    repos = [] of Hash(String, String)
+    expect_kind("[")
+
+    until current["kind"] == "]"
+      expect_word("do")
+      repos << parse_repo_properties
+      expect_word("end")
+      accept_kind(",")
+    end
+
+    expect_kind("]")
+    repos
+  end
+
+  private def parse_repo_properties : Hash(String, String)
+    repo = {} of String => String
+
+    until current_word?("end")
+      key = expect_word
+      expect_kind("=")
+      repo[key] = parse_value
+    end
+
+    repo
+  end
+
+  private def parse_value : String
+    if value = accept_kind("string")
+      value
+    else
+      expect_word
+    end
+  end
+
+  private def current : Token
+    @tokens[@position]
+  end
+
+  private def current_word?(value : String) : Bool
+    current["kind"] == "word" && current["value"] == value
+  end
+
+  private def accept_word(value : String) : Bool
+    return false unless current_word?(value)
+
+    advance
+    true
+  end
+
+  private def accept_kind(kind : String) : String?
+    return nil unless current["kind"] == kind
+
+    value = current["value"]
+    advance
+    value
+  end
+
+  private def expect_word : String
+    raise "Expected identifier, got #{current["kind"]}" unless current["kind"] == "word"
+
+    value = current["value"]
+    advance
+    value
+  end
+
+  private def expect_word(value : String)
+    actual = expect_word
+    raise "Expected '#{value}', got '#{actual}'" unless actual == value
+  end
+
+  private def expect_kind(kind : String)
+    raise "Expected '#{kind}', got #{current["kind"]}" unless current["kind"] == kind
+
+    advance
+  end
+
+  private def advance
+    @position += 1
+  end
+end
+
 class ConfigManager
   def self.load_mise_config(path : String) : MiseConfig
     unless File.exists?(path)
       raise GitError.config_file_not_found("Configuration file not found at: #{path}")
     end
 
-    content = File.read(path)
-    repositories = [] of RepositoryInfo
-
-    # Parse TOML content using crystal's TOML library
-    begin
-      toml_data = TOML.parse(content)
-
-      # Handle the case where the data is an array of repo tables
-      if toml_data.has_key?("repo")
-        repo_data = toml_data["repo"]
-
-        # Process repo_data based on its actual type
-        case repo_data
-        when Array
-          # If repo_data is already an array, process each element
-          repo_data.each do |item|
-            # Each item should be a TOML::Any that represents a repo object
-            repo_hash = if item.is_a?(Hash)
-                          item
-                        elsif item.is_a?(TOML::Any)
-                          # Check if it can be converted to a hash safely
-                          hash_result = item.as_h?
-                          if hash_result.nil?
-                            raise GitError.config_file_invalid("Repository entry is not a valid object: #{item}")
-                          end
-                          hash_result
-                        else
-                          raise GitError.config_file_invalid("Unexpected repository data type: #{item.class}")
-                        end
-
-            name = repo_hash["dir"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'dir' field")
-            url = repo_hash["remote"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'remote' field")
-            branch = repo_hash["branch"]?.try(&.as_s) || "main"
-            commit = repo_hash["commit"]?.try(&.as_s) || ""
-            source = repo_hash["source"]?.try(&.as_s) || "git"
-
-            repositories << RepositoryInfo.new(name, url, branch, commit, source)
-          end
-        when TOML::Any
-          # Check if the TOML::Any represents an array or a hash
-          if repo_data.as_a?
-            # It's an array of objects
-            repo_data.as_a.each do |item|
-              # Each item should be a TOML::Any that represents a repo object
-              repo_hash = if item.is_a?(Hash)
-                            item
-                          elsif item.is_a?(TOML::Any)
-                            # Check if it can be converted to a hash safely
-                            hash_result = item.as_h?
-                            if hash_result.nil?
-                              raise GitError.config_file_invalid("Repository entry is not a valid object: #{item}")
-                            end
-                            hash_result
-                          else
-                            raise GitError.config_file_invalid("Unexpected repository data type: #{item.class}")
-                          end
-
-              name = repo_hash["dir"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'dir' field")
-              url = repo_hash["remote"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'remote' field")
-              branch = repo_hash["branch"]?.try(&.as_s) || "main"
-              commit = repo_hash["commit"]?.try(&.as_s) || ""
-              source = repo_hash["source"]?.try(&.as_s) || "git"
-
-              repositories << RepositoryInfo.new(name, url, branch, commit, source)
-            end
-          else
-            # It's a single object
-            repo_hash = repo_data.as_h
-            name = repo_hash["dir"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'dir' field")
-            url = repo_hash["remote"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'remote' field")
-            branch = repo_hash["branch"]?.try(&.as_s) || "main"
-            commit = repo_hash["commit"]?.try(&.as_s) || ""
-            source = repo_hash["source"]?.try(&.as_s) || "git"
-
-            repositories << RepositoryInfo.new(name, url, branch, commit, source)
-          end
-        else
-          raise GitError.config_file_invalid("Unexpected 'repo' data type: #{repo_data.class}")
-        end
-      end
-    rescue e : TOML::ParseException
-      raise GitError.config_file_invalid("Invalid TOML format: #{e.message}")
-    end
+    repositories = config_format(path) == :rcl ? load_rcl_repositories(path) : load_toml_repositories(path)
 
     if repositories.empty?
-      Utils.print_warning("No repositories found in config. Ensure .meta/reps.toml uses [[repo]] format with 'dir' and 'remote' keys.")
+      Utils.print_warning("No repositories found in config. Ensure the config uses [[repo]] in TOML or root-array do [...] in RCL with 'dir' and 'remote' keys.")
     end
 
     MiseConfig.new(repositories, "main", nil)
   rescue e : File::NotFoundError
     raise GitError.config_file_not_found("Configuration file not found at: #{path}")
+  end
+
+  private def self.config_format(path : String) : Symbol
+    File.extname(path).downcase == ".rcl" ? :rcl : :toml
+  end
+
+  private def self.load_toml_repositories(path : String) : Array(RepositoryInfo)
+    repositories = [] of RepositoryInfo
+    content = File.read(path)
+
+    begin
+      toml_data = TOML.parse(content)
+      return repositories unless toml_data.has_key?("repo")
+
+      each_toml_repo_hash(toml_data["repo"]) do |repo_hash|
+        repositories << repository_from_toml_hash(repo_hash)
+      end
+    rescue e : TOML::ParseException
+      raise GitError.config_file_invalid("Invalid TOML format: #{e.message}")
+    end
+
+    repositories
+  end
+
+  private def self.each_toml_repo_hash(repo_data, & : Hash(String, TOML::Any) ->)
+    case repo_data
+    when Array
+      repo_data.each do |item|
+        yield toml_repo_hash(item)
+      end
+    when TOML::Any
+      if repo_array = repo_data.as_a?
+        repo_array.each do |item|
+          yield toml_repo_hash(item)
+        end
+      else
+        yield repo_data.as_h
+      end
+    else
+      raise GitError.config_file_invalid("Unexpected 'repo' data type: #{repo_data.class}")
+    end
+  end
+
+  private def self.toml_repo_hash(item) : Hash(String, TOML::Any)
+    if item.is_a?(Hash)
+      item
+    elsif item.is_a?(TOML::Any)
+      item.as_h? || raise GitError.config_file_invalid("Repository entry is not a valid object: #{item}")
+    else
+      raise GitError.config_file_invalid("Unexpected repository data type: #{item.class}")
+    end
+  end
+
+  private def self.repository_from_toml_hash(repo_hash : Hash(String, TOML::Any)) : RepositoryInfo
+    name = repo_hash["dir"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'dir' field")
+    url = repo_hash["remote"]?.try(&.as_s) || raise GitError.config_file_invalid("Repository configuration missing 'remote' field")
+    branch = repo_hash["branch"]?.try(&.as_s) || "main"
+    commit = repo_hash["commit"]?.try(&.as_s) || ""
+    source = repo_hash["source"]?.try(&.as_s) || "git"
+
+    RepositoryInfo.new(name, url, branch, commit, source)
+  end
+
+  private def self.load_rcl_repositories(path : String) : Array(RepositoryInfo)
+    repositories = [] of RepositoryInfo
+    content = File.read(path)
+    return repositories if content.strip.empty?
+
+    begin
+      MilkaRclParser.new(content).repositories.each do |repo_hash|
+        repositories << repository_from_rcl_hash(repo_hash)
+      end
+    rescue e
+      raise GitError.config_file_invalid("Invalid RCL format: #{e.message}")
+    end
+
+    repositories
+  end
+
+  private def self.repository_from_rcl_hash(repo_hash : Hash(String, String)) : RepositoryInfo
+    name = repo_hash["dir"]? || raise GitError.config_file_invalid("Repository configuration missing 'dir' field")
+    url = repo_hash["remote"]? || raise GitError.config_file_invalid("Repository configuration missing 'remote' field")
+    branch = repo_hash["branch"]? || "main"
+    commit = repo_hash["commit"]? || ""
+    source = repo_hash["source"]? || "git"
+
+    RepositoryInfo.new(name, url, branch, commit, source)
   end
 
   def self.get_git_remote_info(git_dir : String) : String?
@@ -172,55 +356,7 @@ class ConfigManager
     return false unless File.exists?(config_path)
 
     begin
-      content = File.read(config_path)
-      toml_data = TOML.parse(content)
-
-      if toml_data.has_key?("repo")
-        repo_data = toml_data["repo"]
-
-        case repo_data
-        when Array
-          repo_data.each do |item|
-            repo_hash = if item.is_a?(Hash)
-                          item
-                        elsif item.is_a?(TOML::Any)
-                          hash_result = item.as_h?
-                          return false if hash_result.nil?
-                          hash_result
-                        else
-                          next
-                        end
-
-            existing_dir = repo_hash["dir"]?.try(&.as_s)
-            return true if existing_dir == dir_name
-          end
-        when TOML::Any
-          if repo_data.as_a?
-            repo_data.as_a.each do |item|
-              repo_hash = if item.is_a?(Hash)
-                            item
-                          elsif item.is_a?(TOML::Any)
-                            hash_result = item.as_h?
-                            next if hash_result.nil?
-                            hash_result
-                          else
-                            next
-                          end
-
-              existing_dir = repo_hash["dir"]?.try(&.as_s)
-              return true if existing_dir == dir_name
-            end
-          else
-            repo_hash = repo_data.as_h
-            existing_dir = repo_hash["dir"]?.try(&.as_s)
-            return true if existing_dir == dir_name
-          end
-        else
-          repo_hash = repo_data.as_h
-          existing_dir = repo_hash["dir"]?.try(&.as_s)
-          return true if existing_dir == dir_name
-        end
-      end
+      return load_mise_config(config_path).repositories.any? { |repo| repo.name == dir_name }
     rescue
       # If there's an error parsing the config, return false
     end
@@ -233,20 +369,68 @@ class ConfigManager
     config_dir = File.dirname(config_path)
     Dir.mkdir_p(config_dir) unless File.directory?(config_dir)
 
+    if config_format(config_path) == :rcl
+      add_git_repo_to_rcl_config(config_path, dir_name, remote_url, branch, source)
+      return
+    end
+
     # Check if the repository already exists in the config
     return if repo_exists_in_config(config_path, dir_name)
 
-    # Format the entry in TOML format
-    new_entry = "\n[[repo]]\n"
-    new_entry += "dir = '#{dir_name}'\n"
-    new_entry += "remote = '#{remote_url}'\n"
-    new_entry += "branch = '#{branch}'\n"
-    new_entry += "source = '#{source}'\n\n" if source != "git"
+    new_entry = toml_repo_entry(dir_name, remote_url, branch, source)
 
     # Append the new entry to the config file
     File.open(config_path, "a") do |file|
       file.puts(new_entry)
     end
+  end
+
+  private def self.add_git_repo_to_rcl_config(config_path : String, dir_name : String, remote_url : String, branch : String, source : String)
+    repositories = File.exists?(config_path) ? load_mise_config(config_path).repositories : [] of RepositoryInfo
+    return if repositories.any? { |repo| repo.name == dir_name }
+
+    repositories << RepositoryInfo.new(dir_name, remote_url, branch, "", source)
+    File.write(config_path, rcl_config_content(repositories))
+  rescue e : GitError
+    raise e
+  end
+
+  private def self.toml_repo_entry(dir_name : String, remote_url : String, branch : String, source : String) : String
+    new_entry = "\n[[repo]]\n"
+    new_entry += "dir = '#{dir_name}'\n"
+    new_entry += "remote = '#{remote_url}'\n"
+    new_entry += "branch = '#{branch}'\n"
+    new_entry += "source = '#{source}'\n\n" if source != "git"
+    new_entry
+  end
+
+  private def self.rcl_repo_entry(dir_name : String, remote_url : String, branch : String, source : String) : String
+    lines = [
+      "  do",
+      "    dir = #{rcl_quote(dir_name)}",
+      "    remote = #{rcl_quote(remote_url)}",
+      "    branch = #{rcl_quote(branch)}",
+    ]
+    lines << "    source = #{rcl_quote(source)}" if source != "git"
+    lines << "  end"
+    lines.join("\n")
+  end
+
+  private def self.rcl_config_content(repositories : Array(RepositoryInfo)) : String
+    entries = repositories.map do |repo|
+      rcl_repo_entry(repo.name, repo.url, repo.branch, repo.source)
+    end
+
+    <<-RCL
+    # Milka - Repository Configuration
+    do [
+    #{entries.join(",\n")}
+    ]
+    RCL
+  end
+
+  private def self.rcl_quote(value : String) : String
+    value.inspect
   end
 
   def self.scan_git_directories(root_path : String = ".") : Array(String)
